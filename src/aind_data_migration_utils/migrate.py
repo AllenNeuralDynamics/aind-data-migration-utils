@@ -36,6 +36,7 @@ class Migrator():
         """
 
         self.output_dir = Path(path)
+        self.output_dir.mkdir(parents=True, exist_ok=True)
         self.log_dir = self.output_dir / "logs"
         setup_logger(self.log_dir)
 
@@ -148,11 +149,19 @@ class Migrator():
                     })
             else:
                 logging.info(f"Dry run: Record {record['_id']} would be migrated")
+                self.results.append({
+                    "_id": record["_id"],
+                    "status": "dry_run",
+                    "notes": "",
+                })
 
     def _teardown(self):
         """ Teardown the migration """
 
-        zip_file = create_output_zip("full" if self.full_run else "dry", self.log_dir)
+        zip_file = create_output_zip("full" if self.full_run else "dry", self.log_dir, self.output_dir)
+
+        logging.info(f"Migration succeeded for {len([r for r in self.results if r['status'] == 'success'])} records")
+        logging.info(f"Migration failed for {len([r for r in self.results if r['status'] == 'failed'])} records")
 
         df = pd.DataFrame(self.results)
         df.to_csv(self.output_dir / "results.csv", index=False)

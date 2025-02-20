@@ -4,10 +4,16 @@ import zipfile
 import os
 from pathlib import Path
 
+global logging_initialized, ch, th
+logging_initialized = False
+ch = None
+th = None
+
 
 def setup_logger(logfile_path: Path):
     """Setup logging for migration scripts"""
-    
+    global logging_initialized, ch, th
+
     # make the log directory if it's missing
     logfile_path.mkdir(parents=True, exist_ok=True)
 
@@ -31,14 +37,20 @@ def setup_logger(logfile_path: Path):
     ch.setFormatter(formatter)
     fh.setFormatter(formatter)
 
+    if logging_initialized:
+        logger.removeHandler(ch)
+        logger.removeHandler(fh)
+    else:
+        logging_initialized = True
+
     # add the handlers to logger
     logger.addHandler(ch)
     logger.addHandler(fh)
 
 
-def create_output_zip(run_type: str, log_dir: Path) -> str:
+def create_output_zip(run_type: str, log_dir: Path, output_path: Path) -> str:
     """Create a zip file containing logs and failed records CSV, then clean up unzipped files"""
-    zip_filename = f"{run_type.lower()}_run.zip"
+    zip_filename = output_path / f"{run_type.lower()}_run.zip"
 
     # Get all log files in the log directory
     log_files = [f for f in os.listdir(log_dir) if f.endswith('.log')]
