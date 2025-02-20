@@ -4,15 +4,9 @@ import zipfile
 import os
 from pathlib import Path
 
-global logging_initialized, ch, th
-logging_initialized = False
-ch = None
-th = None
-
 
 def setup_logger(logfile_path: Path):
     """Setup logging for migration scripts"""
-    global logging_initialized, ch, th
 
     # make the log directory if it's missing
     logfile_path.mkdir(parents=True, exist_ok=True)
@@ -22,13 +16,16 @@ def setup_logger(logfile_path: Path):
     logger = logging.getLogger()
     logger.setLevel(logging.INFO)
 
+    # Remove all handlers associated with the logger object
+    for handler in logger.handlers[:]:
+        logger.removeHandler(handler)
+        handler.close()
+
     # create file handler which logs even debug messages
     fh = logging.FileHandler(log_file_name)
     fh.setLevel(logging.DEBUG)
 
     # create console handler, can set the level to info or warning if desired
-    # You can remove the console handler if you don't want to see these messages in the
-    # notebook.
     ch = logging.StreamHandler()
     ch.setLevel(logging.DEBUG)
 
@@ -36,12 +33,6 @@ def setup_logger(logfile_path: Path):
     formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     ch.setFormatter(formatter)
     fh.setFormatter(formatter)
-
-    if logging_initialized:
-        logger.removeHandler(ch)
-        logger.removeHandler(fh)
-    else:
-        logging_initialized = True
 
     # add the handlers to logger
     logger.addHandler(ch)
