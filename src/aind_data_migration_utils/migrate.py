@@ -30,7 +30,7 @@ class Migrator():
         files : List[str], optional
             List of metadata files to include in the migration, by default all files
         prod : bool, optional
-            Whether to run in production mode, by default True
+            Whether to run in the production docdb, by default True
         path : str, optional
             Path to subfolder where output files will be stored, by default "."
         """
@@ -42,7 +42,7 @@ class Migrator():
 
         self.client = MetadataDbClient(
             host="api.allenneuraldynamics.org" if prod else "api.allenneuraldynamics-test.org",
-            database="metadata_index",
+            database="metadata_index" if prod else "test",
             collection="data_assets",
         )
 

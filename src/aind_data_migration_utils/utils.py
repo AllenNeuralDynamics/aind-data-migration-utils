@@ -39,7 +39,7 @@ def setup_logger(logfile_path: Path):
     logger.addHandler(fh)
 
 
-def create_output_zip(run_type: str, log_dir: Path, output_path: Path) -> str:
+def create_output_zip(run_type: str, log_dir: Path, output_path: Path) -> Path:
     """Create a zip file containing logs and failed records CSV, then clean up unzipped files"""
     zip_filename = output_path / f"{run_type.lower()}_run.zip"
 

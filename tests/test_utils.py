@@ -21,8 +21,6 @@ class TestUtils(unittest.TestCase):
         for output_file in self.output_path.glob("*"):
             output_file.unlink()
         self.output_path.rmdir()
-        if os.path.exists("test_run.zip"):
-            os.remove("test_run.zip")
 
     def test_setup_logger_creates_log_file(self):
         setup_logger(self.log_dir)

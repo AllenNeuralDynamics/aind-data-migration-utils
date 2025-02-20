@@ -56,7 +56,7 @@ class TestMigrator(unittest.TestCase):
         mock_setup_logger.assert_called_once_with(migrator.log_dir)
         MockMetadataDbClient.assert_called_once_with(
             host="api.allenneuraldynamics-test.org",
-            database="metadata_index",
+            database="test",
             collection="data_assets"
         )
         
@@ -224,6 +224,44 @@ class TestMigrator(unittest.TestCase):
 
                 mock_create_output_zip.assert_called_once_with("full", migrator.log_dir, migrator.output_dir)
                 mock_to_csv.assert_called_once_with(migrator.output_dir / "results.csv", index=False)
+    
+    @patch('aind_data_migration_utils.migrate.setup_logger')
+    @patch('aind_data_migration_utils.migrate.MetadataDbClient')
+    def test_upsert_full_run_with_error(self, MockMetadataDbClient, mock_setup_logger):
+        query = {"field": "value"}
+        migration_callback = MagicMock()
+        migrator = Migrator(query, migration_callback, prod=True, path="test_path")
+
+        migrator.migrated_records = [{"_id": "123", "name": "new_name"}]
+        migrator.full_run = True
+        mock_response = MagicMock(status_code=500, text="Internal Server Error")
+        migrator.client.upsert_one_docdb_record = MagicMock(return_value=mock_response)
+
+        migrator._upsert()
+
+        migrator.client.upsert_one_docdb_record.assert_called_once_with({"_id": "123", "name": "new_name"})
+        self.assertEqual(migrator.results, [{"_id": "123", "status": "failed", "notes": "Internal Server Error"}])
+
+    @patch('aind_data_migration_utils.migrate.setup_logger')
+    @patch('aind_data_migration_utils.migrate.MetadataDbClient')
+    def test_upsert_dry_run_with_multiple_records(self, MockMetadataDbClient, mock_setup_logger):
+        query = {"field": "value"}
+        migration_callback = MagicMock()
+        migrator = Migrator(query, migration_callback, prod=True, path="test_path")
+
+        migrator.migrated_records = [
+            {"_id": "123", "name": "new_name1"},
+            {"_id": "456", "name": "new_name2"}
+        ]
+        migrator.full_run = False
+
+        migrator._upsert()
+
+        self.assertEqual(migrator.results, [
+            {"_id": "123", "status": "dry_run", "notes": ""},
+            {"_id": "456", "status": "dry_run", "notes": ""}
+        ])
+
 
 if __name__ == '__main__':
     unittest.main()
