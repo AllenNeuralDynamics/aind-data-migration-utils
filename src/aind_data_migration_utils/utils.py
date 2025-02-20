@@ -5,11 +5,14 @@ import os
 from pathlib import Path
 
 
-def setup_logger(logfile_path):
+def setup_logger(logfile_path: Path):
     """Setup logging for migration scripts"""
+    
+    # make the log directory if it's missing
+    logfile_path.mkdir(parents=True, exist_ok=True)
 
     # set up logger with given file path
-    log_file_name = logfile_path + "/log_" + datetime.now().strftime("%Y%m%d_%H%M%S") + ".log"
+    log_file_name = logfile_path / ("log_" + datetime.now().strftime("%Y%m%d_%H%M%S") + ".log")
     logger = logging.getLogger()
     logger.setLevel(logging.INFO)
 

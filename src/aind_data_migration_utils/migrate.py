@@ -7,6 +7,8 @@ import pandas as pd
 from aind_data_access_api.document_db import MetadataDbClient
 from aind_data_migration_utils.utils import setup_logger, create_output_zip
 
+ALWAYS_KEEP_FIELDS = ["_id", "name", "location"]
+
 
 class Migrator():
     """ Migrator class """
@@ -15,7 +17,6 @@ class Migrator():
                  query: dict,
                  migration_callback: callable,
                  files: List[str] = [],
-                 full_run=False,
                  prod: bool = True,
                  path="."):
         """Set up a migration script
@@ -26,6 +27,8 @@ class Migrator():
             MongoDB query to filter the records to migrate
         migration_callback : Callable
             Function that takes a metadata core file dict and returns the modified dict
+        files : List[str], optional
+            List of metadata files to include in the migration, by default all files
         prod : bool, optional
             Whether to run in production mode, by default True
         path : str, optional
@@ -46,16 +49,17 @@ class Migrator():
         self.migration_callback = migration_callback
 
         self.files = files
-        self.full_run = full_run
 
         self.dry_run_complete = False
 
         self.original_records = []
         self.results = []
 
-    def run(self, full_run: bool = False):
+    def run(self, full_run: bool = False, test_mode: bool = False):
         """ Run the migration """
 
+        self.full_run = full_run
+        self.test_mode = test_mode
         if full_run and not self.dry_run_complete:
             raise ValueError("Full run requested but dry run has not been completed.")
 
@@ -87,13 +91,15 @@ class Migrator():
             projection = {
                 file: 1 for file in self.files
             }
-            projection["_id"] = 1
+            for field in ALWAYS_KEEP_FIELDS:
+                projection[field] = 1
         else:
             projection = None
 
-        self.original_records = self.client.retrive_docdb_records(
+        self.original_records = self.client.retrieve_docdb_records(
             filter_query=self.query,
             projection=projection,
+            limit=1 if self.test_mode else 0,
         )
 
         logging.info(f"Retrieved {len(self.original_records)} records")
