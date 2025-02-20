@@ -10,23 +10,28 @@ class TestUtils(unittest.TestCase):
 
     def setUp(self):
         self.log_dir = Path("test_logs")
+        self.output_path = Path("test_output")
         self.log_dir.mkdir(exist_ok=True)
+        self.output_path.mkdir(exist_ok=True)
 
     def tearDown(self):
         for log_file in self.log_dir.glob("*.log"):
             log_file.unlink()
         self.log_dir.rmdir()
+        for output_file in self.output_path.glob("*"):
+            output_file.unlink()
+        self.output_path.rmdir()
         if os.path.exists("test_run.zip"):
             os.remove("test_run.zip")
 
     def test_setup_logger_creates_log_file(self):
-        setup_logger(str(self.log_dir))
+        setup_logger(self.log_dir)
         log_files = list(self.log_dir.glob("*.log"))
         self.assertTrue(len(log_files) > 0, "No log file created")
         self.assertTrue(log_files[0].name.startswith("log_"), "Log file name does not start with 'log_'")
 
     def test_logger_writes_to_log_file(self):
-        setup_logger(str(self.log_dir))
+        setup_logger(self.log_dir)
         logger = logging.getLogger()
         test_message = "This is a test log message"
         logger.info(test_message)
@@ -37,22 +42,23 @@ class TestUtils(unittest.TestCase):
             self.assertIn(test_message, log_content, "Log message not found in log file")
 
     def test_create_output_zip_creates_zip_file(self):
-        setup_logger(str(self.log_dir))
+        setup_logger(self.log_dir)
         logger = logging.getLogger()
         logger.info("Test log message")
 
-        zip_filename = create_output_zip("test", self.log_dir)
+        zip_filename = create_output_zip("test", self.log_dir, self.output_path)
         self.assertTrue(os.path.exists(zip_filename), "Zip file was not created")
 
     def test_create_output_zip_contains_log_files(self):
-        setup_logger(str(self.log_dir))
+        setup_logger(self.log_dir)
         logger = logging.getLogger()
         logger.info("Test log message")
 
-        zip_filename = create_output_zip("test", self.log_dir)
+        zip_filename = create_output_zip("test", self.log_dir, self.output_path)
         with zipfile.ZipFile(zip_filename, 'r') as zipf:
             log_files = [f for f in zipf.namelist() if f.endswith('.log')]
             self.assertTrue(len(log_files) > 0, "No log files found in zip archive")
+
 
 if __name__ == '__main__':
     unittest.main()

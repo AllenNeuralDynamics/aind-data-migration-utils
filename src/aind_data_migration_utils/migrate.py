@@ -1,6 +1,6 @@
 """ Migration script wrapper """
 from pathlib import Path
-from typing import List
+from typing import List, Callable
 import logging
 import pandas as pd
 
@@ -15,7 +15,7 @@ class Migrator():
 
     def __init__(self,
                  query: dict,
-                 migration_callback: callable,
+                 migration_callback: Callable,
                  files: List[str] = [],
                  prod: bool = True,
                  path="."):
