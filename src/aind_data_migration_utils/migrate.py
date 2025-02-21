@@ -40,9 +40,10 @@ class Migrator():
         self.log_dir = self.output_dir / "logs"
         setup_logger(self.log_dir)
 
+        self.prod = prod
         self.client = MetadataDbClient(
             host="api.allenneuraldynamics.org" if prod else "api.allenneuraldynamics-test.org",
-            database="metadata_index" if prod else "test",
+            database="metadata_index" if self.prod else "test",
             collection="data_assets",
         )
 
@@ -66,6 +67,7 @@ class Migrator():
 
         logging.info(f"Starting migration with query: {self.query}")
         logging.info(f"This is a {'full' if full_run else 'dry'} run.")
+        logging.info(f"Pushing migration to {self.client.host}")
 
         self._setup()
         self._migrate()
