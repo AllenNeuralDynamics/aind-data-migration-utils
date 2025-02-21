@@ -28,8 +28,9 @@ query = {
 def your_callback(record: dict) -> dict:
     """ Make changes to a record """
 
-    # For example, fix a subject_id
-    record["subject"]["subject_id"] = "724910"
+    # For example, convert a subject ID that wasn't a string to a string
+    if not isinstance(record["subject"]["subject_id"], str):
+        record["subject"]["subject_id"] = str(record["subject"]["subject_id"])
 
     return record
 
