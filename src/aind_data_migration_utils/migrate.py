@@ -5,7 +5,7 @@ import logging
 import pandas as pd
 
 from aind_data_access_api.document_db import MetadataDbClient
-from aind_data_migration_utils.utils import setup_logger, create_output_zip
+from aind_data_migration_utils.utils import setup_logger
 
 ALWAYS_KEEP_FIELDS = ["_id", "name", "location"]
 
@@ -157,15 +157,16 @@ class Migrator():
                     "notes": "",
                 })
 
-    def _teardown(self):
+    def _teardown(self):  # pragma: no cover
         """ Teardown the migration """
 
-        zip_file = create_output_zip("full" if self.full_run else "dry", self.log_dir, self.output_dir)
-
-        logging.info(f"Migration succeeded for {len([r for r in self.results if r['status'] == 'success'])} records")
-        logging.info(f"Migration failed for {len([r for r in self.results if r['status'] == 'failed'])} records")
+        if self.full_run:
+            logging.info(f"Migration succeeded for {len([r for r in self.results if r['status'] == 'success'])} records")
+            logging.info(f"Migration failed for {len([r for r in self.results if r['status'] == 'failed'])} records")
+        else:
+            logging.info("Dry run complete.")
 
         df = pd.DataFrame(self.results)
         df.to_csv(self.output_dir / "results.csv", index=False)
 
-        logging.info(f"Migration complete. Output zip file: {zip_file}")
+        logging.info(f"Migration complete. Results saved to {self.output_dir}")

@@ -1,9 +1,7 @@
 import unittest
 import logging
 from pathlib import Path
-from aind_data_migration_utils.utils import setup_logger, create_output_zip
-import os
-import zipfile
+from aind_data_migration_utils.utils import setup_logger
 
 
 class TestUtils(unittest.TestCase):
@@ -18,8 +16,6 @@ class TestUtils(unittest.TestCase):
         for log_file in self.log_dir.glob("*.log"):
             log_file.unlink()
         self.log_dir.rmdir()
-        for output_file in self.output_path.glob("*"):
-            output_file.unlink()
         self.output_path.rmdir()
 
     def test_setup_logger_creates_log_file(self):
@@ -38,24 +34,6 @@ class TestUtils(unittest.TestCase):
         with open(log_files[0], 'r') as log_file:
             log_content = log_file.read()
             self.assertIn(test_message, log_content, "Log message not found in log file")
-
-    def test_create_output_zip_creates_zip_file(self):
-        setup_logger(self.log_dir)
-        logger = logging.getLogger()
-        logger.info("Test log message")
-
-        zip_filename = create_output_zip("test", self.log_dir, self.output_path)
-        self.assertTrue(os.path.exists(zip_filename), "Zip file was not created")
-
-    def test_create_output_zip_contains_log_files(self):
-        setup_logger(self.log_dir)
-        logger = logging.getLogger()
-        logger.info("Test log message")
-
-        zip_filename = create_output_zip("test", self.log_dir, self.output_path)
-        with zipfile.ZipFile(zip_filename, 'r') as zipf:
-            log_files = [f for f in zipf.namelist() if f.endswith('.log')]
-            self.assertTrue(len(log_files) > 0, "No log files found in zip archive")
 
 
 if __name__ == '__main__':

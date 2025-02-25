@@ -1,7 +1,5 @@
 import logging
 from datetime import datetime
-import zipfile
-import os
 from pathlib import Path
 
 
@@ -37,18 +35,3 @@ def setup_logger(logfile_path: Path):
     # add the handlers to logger
     logger.addHandler(ch)
     logger.addHandler(fh)
-
-
-def create_output_zip(run_type: str, log_dir: Path, output_path: Path) -> Path:
-    """Create a zip file containing logs and failed records CSV, then clean up unzipped files"""
-    zip_filename = output_path / f"{run_type.lower()}_run.zip"
-
-    # Get all log files in the log directory
-    log_files = [f for f in os.listdir(log_dir) if f.endswith('.log')]
-
-    with zipfile.ZipFile(zip_filename, 'w') as zipf:
-        # Add log files
-        for log_file in log_files:
-            zipf.write(log_dir / log_file, log_file)
-
-    return zip_filename

@@ -218,12 +218,10 @@ class TestMigrator(unittest.TestCase):
         migrator.log_dir = Path("test_path/logs")
         migrator.output_dir = Path("test_path")
 
-        with patch('aind_data_migration_utils.migrate.create_output_zip', return_value="output.zip") as mock_create_output_zip:
-            with patch('pandas.DataFrame.to_csv') as mock_to_csv:
-                migrator._teardown()
+        with patch('pandas.DataFrame.to_csv') as mock_to_csv:
+            migrator._teardown()
 
-                mock_create_output_zip.assert_called_once_with("full", migrator.log_dir, migrator.output_dir)
-                mock_to_csv.assert_called_once_with(migrator.output_dir / "results.csv", index=False)
+            mock_to_csv.assert_called_once_with(migrator.output_dir / "results.csv", index=False)
     
     @patch('aind_data_migration_utils.migrate.setup_logger')
     @patch('aind_data_migration_utils.migrate.MetadataDbClient')
