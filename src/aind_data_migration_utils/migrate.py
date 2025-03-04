@@ -1,4 +1,5 @@
-""" Migration script wrapper """
+"""Migration script wrapper"""
+
 from pathlib import Path
 from typing import List, Callable
 import logging
@@ -10,15 +11,10 @@ from aind_data_migration_utils.utils import setup_logger
 ALWAYS_KEEP_FIELDS = ["_id", "name", "location"]
 
 
-class Migrator():
-    """ Migrator class """
+class Migrator:
+    """Migrator class"""
 
-    def __init__(self,
-                 query: dict,
-                 migration_callback: Callable,
-                 files: List[str] = [],
-                 prod: bool = True,
-                 path="."):
+    def __init__(self, query: dict, migration_callback: Callable, files: List[str] = [], prod: bool = True, path="."):
         """Set up a migration script
 
         Parameters
@@ -58,7 +54,7 @@ class Migrator():
         self.results = []
 
     def run(self, full_run: bool = False, test_mode: bool = False):
-        """ Run the migration """
+        """Run the migration"""
 
         self.full_run = full_run
         self.test_mode = test_mode
@@ -75,7 +71,7 @@ class Migrator():
         self._teardown()
 
     def revert(self):
-        """ Revert a migration """
+        """Revert a migration"""
 
         if not self.original_records:
             raise ValueError("No original records to revert to.")
@@ -83,17 +79,13 @@ class Migrator():
         for record in self.original_records:
             logging.info(f"Reverting record {record['_id']}")
 
-            self.client.upsert_one_docdb_record(
-                record
-            )
+            self.client.upsert_one_docdb_record(record)
 
     def _setup(self):
-        """ Setup the migration """
+        """Setup the migration"""
 
         if self.files:
-            projection = {
-                file: 1 for file in self.files
-            }
+            projection = {file: 1 for file in self.files}
             for field in ALWAYS_KEEP_FIELDS:
                 projection[field] = 1
         else:
@@ -108,60 +100,66 @@ class Migrator():
         logging.info(f"Retrieved {len(self.original_records)} records")
 
     def _migrate(self):
-        """ Migrate the data """
+        """Migrate the data"""
 
         self.migrated_records = []
 
         for record in self.original_records:
             try:
-                self.migrated_records.append(
-                    self.migration_callback(record)
-                )
+                self.migrated_records.append(self.migration_callback(record))
             except Exception as e:
                 logging.error(f"Error migrating record {record['_id']}: {e}")
-                self.results.append({
-                    "_id": record["_id"],
-                    "status": "failed",
-                    "notes": str(e),
-                })
+                self.results.append(
+                    {
+                        "_id": record["_id"],
+                        "status": "failed",
+                        "notes": str(e),
+                    }
+                )
 
     def _upsert(self):
-        """ Upsert the data """
+        """Upsert the data"""
 
         for record in self.migrated_records:
 
             if self.full_run:
-                response = self.client.upsert_one_docdb_record(
-                    record
-                )
+                response = self.client.upsert_one_docdb_record(record)
 
                 if response.status_code == 200:
                     logging.info(f"Record {record['_id']} migrated successfully")
-                    self.results.append({
-                        "_id": record["_id"],
-                        "status": "success",
-                        "notes": "",
-                    })
+                    self.results.append(
+                        {
+                            "_id": record["_id"],
+                            "status": "success",
+                            "notes": "",
+                        }
+                    )
                 else:
                     logging.info(f"Record {record['_id']} upsert error: {response.text}")
-                    self.results.append({
-                        "_id": record["_id"],
-                        "status": "failed",
-                        "notes": response.text,
-                    })
+                    self.results.append(
+                        {
+                            "_id": record["_id"],
+                            "status": "failed",
+                            "notes": response.text,
+                        }
+                    )
             else:
                 logging.info(f"Dry run: Record {record['_id']} would be migrated")
-                self.results.append({
-                    "_id": record["_id"],
-                    "status": "dry_run",
-                    "notes": "",
-                })
+                self.results.append(
+                    {
+                        "_id": record["_id"],
+                        "status": "dry_run",
+                        "notes": "",
+                    }
+                )
 
     def _teardown(self):  # pragma: no cover
-        """ Teardown the migration """
+        """Teardown the migration"""
 
         if self.full_run:
-            logging.info(f"Migration succeeded for {len([r for r in self.results if r['status'] == 'success'])} records")
+            logging.info(
+                f"Migration succeeded for {len([r for r in self.results if r['status'] == 'success'])} records"
+            )
             logging.info(f"Migration failed for {len([r for r in self.results if r['status'] == 'failed'])} records")
         else:
             logging.info("Dry run complete.")

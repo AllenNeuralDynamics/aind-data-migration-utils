@@ -31,10 +31,10 @@ class TestUtils(unittest.TestCase):
         logger.info(test_message)
 
         log_files = list(self.log_dir.glob("*.log"))
-        with open(log_files[0], 'r') as log_file:
+        with open(log_files[0], "r") as log_file:
             log_content = log_file.read()
             self.assertIn(test_message, log_content, "Log message not found in log file")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()
