@@ -1,3 +1,5 @@
+""" Tests for the Migrator class in the migrate module. """
+
 import unittest
 from pathlib import Path
 from unittest.mock import patch, MagicMock
@@ -5,10 +7,12 @@ from aind_data_migration_utils.migrate import Migrator
 
 
 class TestMigrator(unittest.TestCase):
+    """ Tests for the Migrator class """
 
     @patch("aind_data_migration_utils.migrate.setup_logger")
     @patch("aind_data_migration_utils.migrate.MetadataDbClient")
     def test_migrator_initialization(self, MockMetadataDbClient, mock_setup_logger):
+        """ Test the initialization of the Migrator class """
         query = {"field": "value"}
         migration_callback = MagicMock()
         files = ["file1", "file2"]
@@ -34,6 +38,7 @@ class TestMigrator(unittest.TestCase):
     @patch("aind_data_migration_utils.migrate.setup_logger")
     @patch("aind_data_migration_utils.migrate.MetadataDbClient")
     def test_migrator_initialization_non_prod(self, MockMetadataDbClient, mock_setup_logger):
+        """ Test the initialization of the Migrator class in non-prod mode """
         query = {"field": "value"}
         migration_callback = MagicMock()
         files = ["file1", "file2"]
@@ -59,6 +64,7 @@ class TestMigrator(unittest.TestCase):
     @patch("aind_data_migration_utils.migrate.setup_logger")
     @patch("aind_data_migration_utils.migrate.MetadataDbClient")
     def test_run_dry_run(self, MockMetadataDbClient, mock_setup_logger):
+        """ Test the run method with a dry run """
         query = {"field": "value"}
         migration_callback = MagicMock()
         migrator = Migrator(query, migration_callback, prod=True, path="test_path")
@@ -78,6 +84,7 @@ class TestMigrator(unittest.TestCase):
     @patch("aind_data_migration_utils.migrate.setup_logger")
     @patch("aind_data_migration_utils.migrate.MetadataDbClient")
     def test_run_full_run_without_dry_run(self, MockMetadataDbClient, mock_setup_logger):
+        """ Test the run method with a full run without a dry run """
         query = {"field": "value"}
         migration_callback = MagicMock()
         migrator = Migrator(query, migration_callback, prod=True, path="test_path")
@@ -88,6 +95,7 @@ class TestMigrator(unittest.TestCase):
     @patch("aind_data_migration_utils.migrate.setup_logger")
     @patch("aind_data_migration_utils.migrate.MetadataDbClient")
     def test_revert(self, MockMetadataDbClient, mock_setup_logger):
+        """ Test the revert method """
         query = {"field": "value"}
         migration_callback = MagicMock()
         migrator = Migrator(query, migration_callback, prod=True, path="test_path")
@@ -102,6 +110,7 @@ class TestMigrator(unittest.TestCase):
     @patch("aind_data_migration_utils.migrate.setup_logger")
     @patch("aind_data_migration_utils.migrate.MetadataDbClient")
     def test_revert_no_original_records(self, MockMetadataDbClient, mock_setup_logger):
+        """ Test the revert method with no original records """
         query = {"field": "value"}
         migration_callback = MagicMock()
         migrator = Migrator(query, migration_callback, prod=True, path="test_path")
@@ -112,6 +121,7 @@ class TestMigrator(unittest.TestCase):
     @patch("aind_data_migration_utils.migrate.setup_logger")
     @patch("aind_data_migration_utils.migrate.MetadataDbClient")
     def test_setup_with_files(self, MockMetadataDbClient, mock_setup_logger):
+        """ Test the _setup method with files """
         query = {"field": "value"}
         migration_callback = MagicMock()
         files = ["file1", "file2"]
@@ -129,6 +139,7 @@ class TestMigrator(unittest.TestCase):
     @patch("aind_data_migration_utils.migrate.setup_logger")
     @patch("aind_data_migration_utils.migrate.MetadataDbClient")
     def test_setup_without_files(self, MockMetadataDbClient, mock_setup_logger):
+        """ Test the _setup method without files """
         query = {"field": "value"}
         migration_callback = MagicMock()
         migrator = Migrator(query, migration_callback, prod=True, path="test_path")
@@ -143,6 +154,7 @@ class TestMigrator(unittest.TestCase):
     @patch("aind_data_migration_utils.migrate.setup_logger")
     @patch("aind_data_migration_utils.migrate.MetadataDbClient")
     def test_migrate(self, MockMetadataDbClient, mock_setup_logger):
+        """ Test the _migrate method """
         query = {"field": "value"}
         migration_callback = MagicMock(return_value={"_id": "123", "name": "new_name"})
         migrator = Migrator(query, migration_callback, prod=True, path="test_path")
@@ -156,6 +168,7 @@ class TestMigrator(unittest.TestCase):
     @patch("aind_data_migration_utils.migrate.setup_logger")
     @patch("aind_data_migration_utils.migrate.MetadataDbClient")
     def test_migrate_with_error(self, MockMetadataDbClient, mock_setup_logger):
+        """ Test the _migrate method with an error """
         query = {"field": "value"}
         migration_callback = MagicMock(side_effect=Exception("Migration error"))
         migrator = Migrator(query, migration_callback, prod=True, path="test_path")
@@ -169,6 +182,7 @@ class TestMigrator(unittest.TestCase):
     @patch("aind_data_migration_utils.migrate.setup_logger")
     @patch("aind_data_migration_utils.migrate.MetadataDbClient")
     def test_upsert_full_run(self, MockMetadataDbClient, mock_setup_logger):
+        """ Test the _upsert method with a full run """
         query = {"field": "value"}
         migration_callback = MagicMock()
         migrator = Migrator(query, migration_callback, prod=True, path="test_path")
@@ -185,6 +199,7 @@ class TestMigrator(unittest.TestCase):
     @patch("aind_data_migration_utils.migrate.setup_logger")
     @patch("aind_data_migration_utils.migrate.MetadataDbClient")
     def test_upsert_dry_run(self, MockMetadataDbClient, mock_setup_logger):
+        """ Test the _upsert method with a dry run """
         query = {"field": "value"}
         migration_callback = MagicMock()
         migrator = Migrator(query, migration_callback, prod=True, path="test_path")
@@ -199,6 +214,7 @@ class TestMigrator(unittest.TestCase):
     @patch("aind_data_migration_utils.migrate.setup_logger")
     @patch("aind_data_migration_utils.migrate.MetadataDbClient")
     def test_teardown(self, MockMetadataDbClient, mock_setup_logger):
+        """ Test the _teardown method """
         query = {"field": "value"}
         migration_callback = MagicMock()
         migrator = Migrator(query, migration_callback, prod=True, path="test_path")
@@ -216,6 +232,7 @@ class TestMigrator(unittest.TestCase):
     @patch("aind_data_migration_utils.migrate.setup_logger")
     @patch("aind_data_migration_utils.migrate.MetadataDbClient")
     def test_upsert_full_run_with_error(self, MockMetadataDbClient, mock_setup_logger):
+        """ Test the _upsert method with an error """
         query = {"field": "value"}
         migration_callback = MagicMock()
         migrator = Migrator(query, migration_callback, prod=True, path="test_path")
@@ -233,6 +250,7 @@ class TestMigrator(unittest.TestCase):
     @patch("aind_data_migration_utils.migrate.setup_logger")
     @patch("aind_data_migration_utils.migrate.MetadataDbClient")
     def test_upsert_dry_run_with_multiple_records(self, MockMetadataDbClient, mock_setup_logger):
+        """ Test the _upsert method with multiple records """
         query = {"field": "value"}
         migration_callback = MagicMock()
         migrator = Migrator(query, migration_callback, prod=True, path="test_path")
@@ -250,6 +268,7 @@ class TestMigrator(unittest.TestCase):
     @patch("aind_data_migration_utils.migrate.setup_logger")
     @patch("aind_data_migration_utils.migrate.MetadataDbClient")
     def test_teardown_full_run(self, MockMetadataDbClient, mock_setup_logger):
+        """ Test the _teardown method with a full"""
         query = {"field": "value"}
         migration_callback = MagicMock()
         migrator = Migrator(query, migration_callback, prod=True, path="test_path")
@@ -271,6 +290,7 @@ class TestMigrator(unittest.TestCase):
     @patch("aind_data_migration_utils.migrate.setup_logger")
     @patch("aind_data_migration_utils.migrate.MetadataDbClient")
     def test_teardown_dry_run(self, MockMetadataDbClient, mock_setup_logger):
+        """ Test the _teardown method with a dry run """
         query = {"field": "value"}
         migration_callback = MagicMock()
         migrator = Migrator(query, migration_callback, prod=True, path="test_path")
