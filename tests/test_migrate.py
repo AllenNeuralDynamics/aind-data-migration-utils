@@ -260,6 +260,48 @@ class TestMigrator(unittest.TestCase):
             {"_id": "456", "status": "dry_run", "notes": ""}
         ])
 
+    @patch('aind_data_migration_utils.migrate.setup_logger')
+    @patch('aind_data_migration_utils.migrate.MetadataDbClient')
+    def test_teardown_full_run(self, MockMetadataDbClient, mock_setup_logger):
+        query = {"field": "value"}
+        migration_callback = MagicMock()
+        migrator = Migrator(query, migration_callback, prod=True, path="test_path")
+
+        migrator.results = [
+            {"_id": "123", "status": "success", "notes": ""},
+            {"_id": "456", "status": "failed", "notes": "Error"}
+        ]
+        migrator.full_run = True
+        migrator.log_dir = Path("test_path/logs")
+        migrator.output_dir = Path("test_path")
+
+        with patch('pandas.DataFrame.to_csv') as mock_to_csv:
+            migrator._teardown()
+
+            mock_to_csv.assert_called_once_with(migrator.output_dir / "results.csv", index=False)
+            self.assertTrue(migrator.dry_run_complete is False)
+
+    @patch('aind_data_migration_utils.migrate.setup_logger')
+    @patch('aind_data_migration_utils.migrate.MetadataDbClient')
+    def test_teardown_dry_run(self, MockMetadataDbClient, mock_setup_logger):
+        query = {"field": "value"}
+        migration_callback = MagicMock()
+        migrator = Migrator(query, migration_callback, prod=True, path="test_path")
+
+        migrator.results = [
+            {"_id": "123", "status": "dry_run", "notes": ""},
+            {"_id": "456", "status": "dry_run", "notes": ""}
+        ]
+        migrator.full_run = False
+        migrator.log_dir = Path("test_path/logs")
+        migrator.output_dir = Path("test_path")
+
+        with patch('pandas.DataFrame.to_csv') as mock_to_csv:
+            migrator._teardown()
+
+            mock_to_csv.assert_called_once_with(migrator.output_dir / "results.csv", index=False)
+            self.assertTrue(migrator.dry_run_complete is True)
+
 
 if __name__ == '__main__':
     unittest.main()

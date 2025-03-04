@@ -165,6 +165,7 @@ class Migrator():
             logging.info(f"Migration failed for {len([r for r in self.results if r['status'] == 'failed'])} records")
         else:
             logging.info("Dry run complete.")
+            self.dry_run_complete = True
 
         df = pd.DataFrame(self.results)
         df.to_csv(self.output_dir / "results.csv", index=False)
