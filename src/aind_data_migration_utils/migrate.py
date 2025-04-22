@@ -1,7 +1,7 @@
 """Migration script wrapper"""
 
 from pathlib import Path
-from typing import List, Callable
+from typing import List, Callable, Any
 import logging
 import pandas as pd
 
@@ -14,7 +14,13 @@ ALWAYS_KEEP_FIELDS = ["_id", "name", "location"]
 class Migrator:
     """Migrator class"""
 
-    def __init__(self, query: dict, migration_callback: Callable, files: List[str] = [], prod: bool = True, path="."):
+    def __init__(self,
+                 query: dict,
+                 migration_callback: Callable,
+                 files: List[str] = [],
+                 prod: bool = True,
+                 test_mode: bool = False,
+                 path="."):
         """Set up a migration script
 
         Parameters
@@ -35,6 +41,8 @@ class Migrator:
         self.output_dir.mkdir(parents=True, exist_ok=True)
         self.log_dir = self.output_dir / "logs"
         setup_logger(self.log_dir)
+        
+        self.test_mode = test_mode
 
         self.prod = prod
         self.client = MetadataDbClient(
@@ -53,11 +61,14 @@ class Migrator:
         self.original_records = []
         self.results = []
 
-    def run(self, full_run: bool = False, test_mode: bool = False):
+    def run(self, full_run: bool = False):
         """Run the migration"""
 
+        self._setup()
+
+        self.dry_run_complete = self._read_dry_file()
+
         self.full_run = full_run
-        self.test_mode = test_mode
         if full_run and not self.dry_run_complete:
             raise ValueError("Full run requested but dry run has not been completed.")
 
@@ -65,7 +76,6 @@ class Migrator:
         logging.info(f"This is a {'full' if full_run else 'dry'} run.")
         logging.info(f"Pushing migration to {self.client.host}")
 
-        self._setup()
         self._migrate()
         self._upsert()
         self._teardown()
@@ -164,8 +174,44 @@ class Migrator:
         else:
             logging.info("Dry run complete.")
             self.dry_run_complete = True
+            self._write_dry_file()
 
         df = pd.DataFrame(self.results)
         df.to_csv(self.output_dir / "results.csv", index=False)
 
         logging.info(f"Migration complete. Results saved to {self.output_dir}")
+
+    def _dry_file_path(self):
+        """Get the path to the dry run file"""
+        return self.output_dir / "dry_run_hash.txt"
+
+    def _hash(self):
+        """Hash the original records to check if the dry run has been completed"""
+        def make_hashable(lst: list[dict[str, Any]]) -> tuple:
+            return tuple(
+                tuple(sorted(d.items()))
+                for d in lst
+            )
+        return hash(make_hashable(self.original_records))
+
+    def _read_dry_file(self):
+        """Read the dry run file to check if the dry run has been completed"""
+        dry_file = self._dry_file_path()
+
+        if not dry_file.exists():
+            return False
+
+        with open(dry_file, "r") as f:
+            hash_data = int(f.read())
+
+        return hash_data == self._hash()
+
+    def _write_dry_file(self):
+        """Write a hashed file indicating that the dry run has been completed"""
+        dry_file = self._dry_file_path()
+
+        hash_data = self._hash()
+
+        with open(dry_file, "w") as f:
+            f.write(str(hash_data))
+        logging.info(f"Hash data for dry run written to {dry_file}")

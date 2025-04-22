@@ -19,7 +19,7 @@ class TestMigrator(unittest.TestCase):
         prod = True
         path = "test_path"
 
-        migrator = Migrator(query, migration_callback, files, prod, path)
+        migrator = Migrator(query=query, migration_callback=migration_callback, files=files, prod=prod, path=path)
 
         self.assertEqual(migrator.query, query)
         self.assertEqual(migrator.migration_callback, migration_callback)
@@ -45,7 +45,7 @@ class TestMigrator(unittest.TestCase):
         prod = False
         path = "test_path"
 
-        migrator = Migrator(query, migration_callback, files, prod, path)
+        migrator = Migrator(query, migration_callback, files, prod, path=path)
 
         self.assertEqual(migrator.query, query)
         self.assertEqual(migrator.migration_callback, migration_callback)
@@ -67,14 +67,14 @@ class TestMigrator(unittest.TestCase):
         """ Test the run method with a dry run """
         query = {"field": "value"}
         migration_callback = MagicMock()
-        migrator = Migrator(query, migration_callback, prod=True, path="test_path")
+        migrator = Migrator(query, migration_callback, prod=True, path="test_path", test_mode=True)
 
         migrator._setup = MagicMock()
         migrator._migrate = MagicMock()
         migrator._upsert = MagicMock()
         migrator._teardown = MagicMock()
 
-        migrator.run(full_run=False, test_mode=True)
+        migrator.run(full_run=False)
 
         migrator._setup.assert_called_once()
         migrator._migrate.assert_called_once()
@@ -87,10 +87,10 @@ class TestMigrator(unittest.TestCase):
         """ Test the run method with a full run without a dry run """
         query = {"field": "value"}
         migration_callback = MagicMock()
-        migrator = Migrator(query, migration_callback, prod=True, path="test_path")
+        migrator = Migrator(query, migration_callback, prod=True, path="test_path", test_mode=False)
 
         with self.assertRaises(ValueError):
-            migrator.run(full_run=True, test_mode=False)
+            migrator.run(full_run=True)
 
     @patch("aind_data_migration_utils.migrate.setup_logger")
     @patch("aind_data_migration_utils.migrate.MetadataDbClient")
@@ -308,6 +308,76 @@ class TestMigrator(unittest.TestCase):
 
             mock_to_csv.assert_called_once_with(migrator.output_dir / "results.csv", index=False)
             self.assertTrue(migrator.dry_run_complete is True)
+
+    @patch("aind_data_migration_utils.migrate.setup_logger")
+    @patch("aind_data_migration_utils.migrate.MetadataDbClient")
+    def test_dry_file_path(self, MockMetadataDbClient, mock_setup_logger):
+        """ Test the _dry_file_path method """
+        query = {"field": "value"}
+        migration_callback = MagicMock()
+        migrator = Migrator(query, migration_callback, prod=True, path="test_path")
+
+        expected_path = Path("test_path/dry_run_hash.txt")
+        self.assertEqual(migrator._dry_file_path(), expected_path)
+
+    @patch("aind_data_migration_utils.migrate.setup_logger")
+    @patch("aind_data_migration_utils.migrate.MetadataDbClient")
+    def test_hash(self, MockMetadataDbClient, mock_setup_logger):
+        """ Test the _hash method """
+        query = {"field": "value"}
+        migration_callback = MagicMock()
+        migrator = Migrator(query, migration_callback, prod=True, path="test_path")
+
+        migrator.original_records = [{"_id": "123", "name": "test"}]
+        expected_hash = hash(tuple(tuple(sorted(d.items())) for d in [{"_id": "123", "name": "test"}]))
+        self.assertEqual(migrator._hash(), expected_hash)
+
+    @patch("aind_data_migration_utils.migrate.setup_logger")
+    @patch("aind_data_migration_utils.migrate.MetadataDbClient")
+    def test_read_dry_file_exists(self, MockMetadataDbClient, mock_setup_logger):
+        """ Test the _read_dry_file method when the file exists """
+        query = {"field": "value"}
+        migration_callback = MagicMock()
+        migrator = Migrator(query, migration_callback, prod=True, path="test_path")
+
+        migrator.original_records = [{"_id": "123", "name": "test"}]
+        expected_hash = hash(tuple(tuple(sorted(d.items())) for d in [{"_id": "123", "name": "test"}]))
+
+        dry_file_path = migrator._dry_file_path()
+        dry_file_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(dry_file_path, "w") as f:
+            f.write(str(expected_hash))
+
+        self.assertTrue(migrator._read_dry_file())
+
+    @patch("aind_data_migration_utils.migrate.setup_logger")
+    @patch("aind_data_migration_utils.migrate.MetadataDbClient")
+    def test_read_dry_file_not_exists(self, MockMetadataDbClient, mock_setup_logger):
+        """ Test the _read_dry_file method when the file does not exist """
+        query = {"field": "value"}
+        migration_callback = MagicMock()
+        migrator = Migrator(query, migration_callback, prod=True, path="test_path")
+
+        self.assertFalse(migrator._read_dry_file())
+
+    @patch("aind_data_migration_utils.migrate.setup_logger")
+    @patch("aind_data_migration_utils.migrate.MetadataDbClient")
+    def test_write_dry_file(self, MockMetadataDbClient, mock_setup_logger):
+        """ Test the _write_dry_file method """
+        query = {"field": "value"}
+        migration_callback = MagicMock()
+        migrator = Migrator(query, migration_callback, prod=True, path="test_path")
+
+        migrator.original_records = [{"_id": "123", "name": "test"}]
+        expected_hash = hash(tuple(tuple(sorted(d.items())) for d in [{"_id": "123", "name": "test"}]))
+
+        migrator._write_dry_file()
+
+        dry_file_path = migrator._dry_file_path()
+        with open(dry_file_path, "r") as f:
+            written_hash = int(f.read())
+
+        self.assertEqual(written_hash, expected_hash)
 
 
 if __name__ == "__main__":
