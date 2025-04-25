@@ -8,7 +8,7 @@ import pandas as pd
 from aind_data_access_api.document_db import MetadataDbClient
 from aind_data_migration_utils.utils import setup_logger
 
-ALWAYS_KEEP_FIELDS = ["_id", "name", "location"]
+ALWAYS_KEEP_FIELDS = ["name", "location"]
 
 
 class Migrator:
@@ -77,7 +77,7 @@ class Migrator:
             raise ValueError("No original records to revert to.")
 
         for record in self.original_records:
-            logging.info(f"Reverting record {record['_id']}")
+            logging.info(f"Reverting record {record['name']}")
 
             self.client.upsert_one_docdb_record(record)
 
@@ -108,10 +108,10 @@ class Migrator:
             try:
                 self.migrated_records.append(self.migration_callback(record))
             except Exception as e:
-                logging.error(f"Error migrating record {record['_id']}: {e}")
+                logging.error(f"Error migrating record {record['name']}: {e}")
                 self.results.append(
                     {
-                        "_id": record["_id"],
+                        "name": record["name"],
                         "status": "failed",
                         "notes": str(e),
                     }
@@ -126,28 +126,28 @@ class Migrator:
                 response = self.client.upsert_one_docdb_record(record)
 
                 if response.status_code == 200:
-                    logging.info(f"Record {record['_id']} migrated successfully")
+                    logging.info(f"Record {record['name']} migrated successfully")
                     self.results.append(
                         {
-                            "_id": record["_id"],
+                            "name": record["name"],
                             "status": "success",
                             "notes": "",
                         }
                     )
                 else:
-                    logging.info(f"Record {record['_id']} upsert error: {response.text}")
+                    logging.info(f"Record {record['name']} upsert error: {response.text}")
                     self.results.append(
                         {
-                            "_id": record["_id"],
+                            "name": record["name"],
                             "status": "failed",
                             "notes": response.text,
                         }
                     )
             else:
-                logging.info(f"Dry run: Record {record['_id']} would be migrated")
+                logging.info(f"Dry run: Record {record['name']} would be migrated")
                 self.results.append(
                     {
-                        "_id": record["_id"],
+                        "name": record["name"],
                         "status": "dry_run",
                         "notes": "",
                     }
