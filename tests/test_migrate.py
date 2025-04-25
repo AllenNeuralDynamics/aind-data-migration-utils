@@ -102,12 +102,12 @@ class TestMigrator(unittest.TestCase):
         migration_callback = MagicMock()
         migrator = Migrator(query, migration_callback, prod=True, path="test_path")
 
-        migrator.original_records = [{"_id": "123"}]
+        migrator.original_records = [{"name": "123"}]
         migrator.client.upsert_one_docdb_record = MagicMock()
 
         migrator.revert()
 
-        migrator.client.upsert_one_docdb_record.assert_called_once_with({"_id": "123"})
+        migrator.client.upsert_one_docdb_record.assert_called_once_with({"name": "123"})
 
     @patch("aind_data_migration_utils.migrate.setup_logger")
     @patch("aind_data_migration_utils.migrate.MetadataDbClient")
@@ -130,12 +130,12 @@ class TestMigrator(unittest.TestCase):
         migrator = Migrator(query, migration_callback, files, prod=True, path="test_path")
         migrator.test_mode = False
 
-        migrator.client.retrieve_docdb_records = MagicMock(return_value=[{"_id": "123"}])
+        migrator.client.retrieve_docdb_records = MagicMock(return_value=[{"name": "123"}])
 
         migrator._setup()
 
         migrator.client.retrieve_docdb_records.assert_called_once_with(
-            filter_query=query, projection={"file1": 1, "file2": 1, "_id": 1, "name": 1, "location": 1}, limit=0
+            filter_query=query, projection={"file1": 1, "file2": 1, "name": 1, "name": 1, "location": 1}, limit=0
         )
 
     @patch("aind_data_migration_utils.migrate.setup_logger")
@@ -147,7 +147,7 @@ class TestMigrator(unittest.TestCase):
         migrator = Migrator(query, migration_callback, prod=True, path="test_path")
         migrator.test_mode = False
 
-        migrator.client.retrieve_docdb_records = MagicMock(return_value=[{"_id": "123"}])
+        migrator.client.retrieve_docdb_records = MagicMock(return_value=[{"name": "123"}])
 
         migrator._setup()
 
@@ -158,14 +158,14 @@ class TestMigrator(unittest.TestCase):
     def test_migrate(self, MockMetadataDbClient, mock_setup_logger):
         """Test the _migrate method"""
         query = {"field": "value"}
-        migration_callback = MagicMock(return_value={"_id": "123", "name": "new_name"})
+        migration_callback = MagicMock(return_value={"name": "123", "name": "new_name"})
         migrator = Migrator(query, migration_callback, prod=True, path="test_path")
 
-        migrator.original_records = [{"_id": "123", "name": "old_name"}]
+        migrator.original_records = [{"name": "123", "name": "old_name"}]
 
         migrator._migrate()
 
-        self.assertEqual(migrator.migrated_records, [{"_id": "123", "name": "new_name"}])
+        self.assertEqual(migrator.migrated_records, [{"name": "123", "name": "new_name"}])
 
     @patch("aind_data_migration_utils.migrate.setup_logger")
     @patch("aind_data_migration_utils.migrate.MetadataDbClient")
@@ -175,11 +175,11 @@ class TestMigrator(unittest.TestCase):
         migration_callback = MagicMock(side_effect=Exception("Migration error"))
         migrator = Migrator(query, migration_callback, prod=True, path="test_path")
 
-        migrator.original_records = [{"_id": "123", "name": "old_name"}]
+        migrator.original_records = [{"name": "123", "name": "old_name"}]
 
         migrator._migrate()
 
-        self.assertEqual(migrator.results, [{"_id": "123", "status": "failed", "notes": "Migration error"}])
+        self.assertEqual(migrator.results, [{"name": "123", "status": "failed", "notes": "Migration error"}])
 
     @patch("aind_data_migration_utils.migrate.setup_logger")
     @patch("aind_data_migration_utils.migrate.MetadataDbClient")
@@ -189,14 +189,14 @@ class TestMigrator(unittest.TestCase):
         migration_callback = MagicMock()
         migrator = Migrator(query, migration_callback, prod=True, path="test_path")
 
-        migrator.migrated_records = [{"_id": "123", "name": "new_name"}]
+        migrator.migrated_records = [{"name": "123", "name": "new_name"}]
         migrator.full_run = True
         migrator.client.upsert_one_docdb_record = MagicMock(return_value=MagicMock(status_code=200))
 
         migrator._upsert()
 
-        migrator.client.upsert_one_docdb_record.assert_called_once_with({"_id": "123", "name": "new_name"})
-        self.assertEqual(migrator.results, [{"_id": "123", "status": "success", "notes": ""}])
+        migrator.client.upsert_one_docdb_record.assert_called_once_with({"name": "123", "name": "new_name"})
+        self.assertEqual(migrator.results, [{"name": "123", "status": "success", "notes": ""}])
 
     @patch("aind_data_migration_utils.migrate.setup_logger")
     @patch("aind_data_migration_utils.migrate.MetadataDbClient")
@@ -206,12 +206,12 @@ class TestMigrator(unittest.TestCase):
         migration_callback = MagicMock()
         migrator = Migrator(query, migration_callback, prod=True, path="test_path")
 
-        migrator.migrated_records = [{"_id": "123", "name": "new_name"}]
+        migrator.migrated_records = [{"name": "123", "name": "new_name"}]
         migrator.full_run = False
 
         migrator._upsert()
 
-        self.assertEqual(migrator.results, [{"_id": "123", "status": "dry_run", "notes": ""}])
+        self.assertEqual(migrator.results, [{"name": "123", "status": "dry_run", "notes": ""}])
 
     @patch("aind_data_migration_utils.migrate.setup_logger")
     @patch("aind_data_migration_utils.migrate.MetadataDbClient")
@@ -221,7 +221,7 @@ class TestMigrator(unittest.TestCase):
         migration_callback = MagicMock()
         migrator = Migrator(query, migration_callback, prod=True, path="test_path")
 
-        migrator.results = [{"_id": "123", "status": "success", "notes": ""}]
+        migrator.results = [{"name": "123", "status": "success", "notes": ""}]
         migrator.full_run = True
         migrator.log_dir = Path("test_path/logs")
         migrator.output_dir = Path("test_path")
@@ -239,15 +239,15 @@ class TestMigrator(unittest.TestCase):
         migration_callback = MagicMock()
         migrator = Migrator(query, migration_callback, prod=True, path="test_path")
 
-        migrator.migrated_records = [{"_id": "123", "name": "new_name"}]
+        migrator.migrated_records = [{"name": "123", "name": "new_name"}]
         migrator.full_run = True
         mock_response = MagicMock(status_code=500, text="Internal Server Error")
         migrator.client.upsert_one_docdb_record = MagicMock(return_value=mock_response)
 
         migrator._upsert()
 
-        migrator.client.upsert_one_docdb_record.assert_called_once_with({"_id": "123", "name": "new_name"})
-        self.assertEqual(migrator.results, [{"_id": "123", "status": "failed", "notes": "Internal Server Error"}])
+        migrator.client.upsert_one_docdb_record.assert_called_once_with({"name": "123", "name": "new_name"})
+        self.assertEqual(migrator.results, [{"name": "123", "status": "failed", "notes": "Internal Server Error"}])
 
     @patch("aind_data_migration_utils.migrate.setup_logger")
     @patch("aind_data_migration_utils.migrate.MetadataDbClient")
@@ -257,14 +257,14 @@ class TestMigrator(unittest.TestCase):
         migration_callback = MagicMock()
         migrator = Migrator(query, migration_callback, prod=True, path="test_path")
 
-        migrator.migrated_records = [{"_id": "123", "name": "new_name1"}, {"_id": "456", "name": "new_name2"}]
+        migrator.migrated_records = [{"name": "123", "name": "new_name1"}, {"name": "456", "name": "new_name2"}]
         migrator.full_run = False
 
         migrator._upsert()
 
         self.assertEqual(
             migrator.results,
-            [{"_id": "123", "status": "dry_run", "notes": ""}, {"_id": "456", "status": "dry_run", "notes": ""}],
+            [{"name": "123", "status": "dry_run", "notes": ""}, {"name": "456", "status": "dry_run", "notes": ""}],
         )
 
     @patch("aind_data_migration_utils.migrate.setup_logger")
@@ -276,8 +276,8 @@ class TestMigrator(unittest.TestCase):
         migrator = Migrator(query, migration_callback, prod=True, path="test_path")
 
         migrator.results = [
-            {"_id": "123", "status": "success", "notes": ""},
-            {"_id": "456", "status": "failed", "notes": "Error"},
+            {"name": "123", "status": "success", "notes": ""},
+            {"name": "456", "status": "failed", "notes": "Error"},
         ]
         migrator.full_run = True
         migrator.log_dir = Path("test_path/logs")
@@ -298,8 +298,8 @@ class TestMigrator(unittest.TestCase):
         migrator = Migrator(query, migration_callback, prod=True, path="test_path")
 
         migrator.results = [
-            {"_id": "123", "status": "dry_run", "notes": ""},
-            {"_id": "456", "status": "dry_run", "notes": ""},
+            {"name": "123", "status": "dry_run", "notes": ""},
+            {"name": "456", "status": "dry_run", "notes": ""},
         ]
         migrator.full_run = False
         migrator.log_dir = Path("test_path/logs")
@@ -331,7 +331,7 @@ class TestMigrator(unittest.TestCase):
         query = {"field": "value"}
         migration_callback = MagicMock()
         migrator = Migrator(query, migration_callback, prod=True, path="test_path")
-        migrator.original_records = [{"_id": "123"}]
+        migrator.original_records = [{"name": "123"}]
         mock_hash_records.return_value = "hash123"
 
         result = migrator._hash()
