@@ -264,7 +264,10 @@ class TestMigrator(unittest.TestCase):
 
         self.assertEqual(
             migrator.results,
-            [{"name": "new_name1", "status": "dry_run", "notes": ""}, {"name": "new_name2", "status": "dry_run", "notes": ""}],
+            [
+                {"name": "new_name1", "status": "dry_run", "notes": ""},
+                {"name": "new_name2", "status": "dry_run", "notes": ""},
+            ],
         )
 
     @patch("aind_data_migration_utils.migrate.setup_logger")
