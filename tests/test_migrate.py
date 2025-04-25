@@ -196,7 +196,7 @@ class TestMigrator(unittest.TestCase):
         migrator._upsert()
 
         migrator.client.upsert_one_docdb_record.assert_called_once_with({"name": "new_name"})
-        self.assertEqual(migrator.results, [{"name": "123", "status": "success", "notes": ""}])
+        self.assertEqual(migrator.results, [{"name": "new_name", "status": "success", "notes": ""}])
 
     @patch("aind_data_migration_utils.migrate.setup_logger")
     @patch("aind_data_migration_utils.migrate.MetadataDbClient")
