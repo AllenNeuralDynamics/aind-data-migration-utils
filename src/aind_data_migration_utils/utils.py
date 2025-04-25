@@ -1,4 +1,4 @@
-""" Utility functions """
+"""Utility functions"""
 
 import logging
 from datetime import datetime

@@ -14,13 +14,15 @@ ALWAYS_KEEP_FIELDS = ["_id", "name", "location"]
 class Migrator:
     """Migrator class"""
 
-    def __init__(self,
-                 query: dict,
-                 migration_callback: Callable,
-                 files: List[str] = [],
-                 prod: bool = True,
-                 test_mode: bool = False,
-                 path="."):
+    def __init__(
+        self,
+        query: dict,
+        migration_callback: Callable,
+        files: List[str] = [],
+        prod: bool = True,
+        test_mode: bool = False,
+        path=".",
+    ):
         """Set up a migration script
 
         Parameters
@@ -41,7 +43,7 @@ class Migrator:
         self.output_dir.mkdir(parents=True, exist_ok=True)
         self.log_dir = self.output_dir / "logs"
         setup_logger(self.log_dir)
-        
+
         self.test_mode = test_mode
 
         self.prod = prod
@@ -187,11 +189,10 @@ class Migrator:
 
     def _hash(self):
         """Hash the original records to check if the dry run has been completed"""
+
         def make_hashable(lst: list[dict[str, Any]]) -> tuple:
-            return tuple(
-                tuple(sorted(d.items()))
-                for d in lst
-            )
+            return tuple(tuple(sorted(d.items())) for d in lst)
+
         return hash(make_hashable(self.original_records))
 
     def _read_dry_file(self):
