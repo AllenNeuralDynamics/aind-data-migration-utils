@@ -4,6 +4,9 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch, MagicMock
 from aind_data_migration_utils.migrate import Migrator
+import json
+from unittest.mock import patch, MagicMock, mock_open
+from hashlib import sha256
 
 
 class TestMigrator(unittest.TestCase):
@@ -317,68 +320,91 @@ class TestMigrator(unittest.TestCase):
         migration_callback = MagicMock()
         migrator = Migrator(query, migration_callback, prod=True, path="test_path")
 
-        expected_path = Path("test_path/dry_run_hash.txt")
-        self.assertEqual(migrator._dry_file_path(), expected_path)
+        path = migrator._dry_file_path()
+
+        self.assertEqual(path, Path("test_path") / "dry_run_hash.txt")
 
     @patch("aind_data_migration_utils.migrate.setup_logger")
     @patch("aind_data_migration_utils.migrate.MetadataDbClient")
-    def test_hash(self, MockMetadataDbClient, mock_setup_logger):
+    @patch("aind_data_migration_utils.migrate.hash_records")
+    def test_hash(self, mock_hash_records, MockMetadataDbClient, mock_setup_logger):
         """Test the _hash method"""
         query = {"field": "value"}
         migration_callback = MagicMock()
         migrator = Migrator(query, migration_callback, prod=True, path="test_path")
+        migrator.original_records = [{"_id": "123"}]
+        mock_hash_records.return_value = "hash123"
 
-        migrator.original_records = [{"_id": "123", "name": "test"}]
-        expected_hash = hash(tuple(tuple(sorted(d.items())) for d in [{"_id": "123", "name": "test"}]))
-        self.assertEqual(migrator._hash(), expected_hash)
+        result = migrator._hash()
+
+        mock_hash_records.assert_called_once_with(migrator.original_records)
+        self.assertEqual(result, "hash123")
 
     @patch("aind_data_migration_utils.migrate.setup_logger")
     @patch("aind_data_migration_utils.migrate.MetadataDbClient")
-    def test_read_dry_file_exists(self, MockMetadataDbClient, mock_setup_logger):
-        """Test the _read_dry_file method when the file exists"""
+    @patch("pathlib.Path.exists")
+    @patch("builtins.open", new_callable=mock_open, read_data="hash123")
+    def test_read_dry_file_exists_and_matches(self, mock_file, mock_exists, MockMetadataDbClient, mock_setup_logger):
+        """Test the _read_dry_file method when file exists and hashes match"""
         query = {"field": "value"}
         migration_callback = MagicMock()
         migrator = Migrator(query, migration_callback, prod=True, path="test_path")
+        mock_exists.return_value = True
+        migrator._hash = MagicMock(return_value="hash123")
 
-        migrator.original_records = [{"_id": "123", "name": "test"}]
-        expected_hash = hash(tuple(tuple(sorted(d.items())) for d in [{"_id": "123", "name": "test"}]))
+        result = migrator._read_dry_file()
 
-        dry_file_path = migrator._dry_file_path()
-        dry_file_path.parent.mkdir(parents=True, exist_ok=True)
-        with open(dry_file_path, "w") as f:
-            f.write(str(expected_hash))
-
-        self.assertTrue(migrator._read_dry_file())
+        self.assertTrue(result)
+        mock_file.assert_called_once_with(migrator._dry_file_path(), "r")
 
     @patch("aind_data_migration_utils.migrate.setup_logger")
     @patch("aind_data_migration_utils.migrate.MetadataDbClient")
-    def test_read_dry_file_not_exists(self, MockMetadataDbClient, mock_setup_logger):
-        """Test the _read_dry_file method when the file does not exist"""
+    @patch("pathlib.Path.exists")
+    @patch("builtins.open", new_callable=mock_open, read_data="hash456")
+    def test_read_dry_file_exists_but_does_not_match(
+        self, mock_file, mock_exists, MockMetadataDbClient, mock_setup_logger
+    ):
+        """Test the _read_dry_file method when file exists but hashes don't match"""
         query = {"field": "value"}
         migration_callback = MagicMock()
         migrator = Migrator(query, migration_callback, prod=True, path="test_path")
+        mock_exists.return_value = True
+        migrator._hash = MagicMock(return_value="hash123")
 
-        self.assertFalse(migrator._read_dry_file())
+        result = migrator._read_dry_file()
+
+        self.assertFalse(result)
+        mock_file.assert_called_once_with(migrator._dry_file_path(), "r")
 
     @patch("aind_data_migration_utils.migrate.setup_logger")
     @patch("aind_data_migration_utils.migrate.MetadataDbClient")
-    def test_write_dry_file(self, MockMetadataDbClient, mock_setup_logger):
+    @patch("pathlib.Path.exists")
+    @patch("builtins.print")
+    def test_read_dry_file_does_not_exist(self, mock_print, mock_exists, MockMetadataDbClient, mock_setup_logger):
+        """Test the _read_dry_file method when file doesn't exist"""
+        query = {"field": "value"}
+        migration_callback = MagicMock()
+        migrator = Migrator(query, migration_callback, prod=True, path="test_path")
+        mock_exists.return_value = False
+
+        result = migrator._read_dry_file()
+
+        self.assertFalse(result)
+        mock_print.assert_called_once()
+
+    @patch("aind_data_migration_utils.migrate.setup_logger")
+    @patch("aind_data_migration_utils.migrate.MetadataDbClient")
+    @patch("builtins.open", new_callable=mock_open)
+    @patch("logging.info")
+    def test_write_dry_file(self, mock_log_info, mock_file, MockMetadataDbClient, mock_setup_logger):
         """Test the _write_dry_file method"""
         query = {"field": "value"}
         migration_callback = MagicMock()
         migrator = Migrator(query, migration_callback, prod=True, path="test_path")
-
-        migrator.original_records = [{"_id": "123", "name": "test"}]
-        expected_hash = hash(tuple(tuple(sorted(d.items())) for d in [{"_id": "123", "name": "test"}]))
+        migrator._hash = MagicMock(return_value="hash123")
 
         migrator._write_dry_file()
 
-        dry_file_path = migrator._dry_file_path()
-        with open(dry_file_path, "r") as f:
-            written_hash = int(f.read())
-
-        self.assertEqual(written_hash, expected_hash)
-
-
-if __name__ == "__main__":
-    unittest.main()
+        mock_file.assert_called_once_with(migrator._dry_file_path(), "w")
+        mock_file().write.assert_called_once_with("hash123")
+        mock_log_info.assert_called_once()

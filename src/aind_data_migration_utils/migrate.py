@@ -1,12 +1,12 @@
 """Migration script wrapper"""
 
 from pathlib import Path
-from typing import List, Callable, Any
+from typing import List, Callable
 import logging
 import pandas as pd
 
 from aind_data_access_api.document_db import MetadataDbClient
-from aind_data_migration_utils.utils import setup_logger
+from aind_data_migration_utils.utils import setup_logger, hash_records
 
 ALWAYS_KEEP_FIELDS = ["_id", "name", "location"]
 
@@ -49,7 +49,7 @@ class Migrator:
         self.prod = prod
         self.client = MetadataDbClient(
             host="api.allenneuraldynamics.org" if prod else "api.allenneuraldynamics-test.org",
-            database="metadata_index" if self.prod else "test",
+            database="metadata_index",
             collection="data_assets",
         )
 
@@ -67,12 +67,15 @@ class Migrator:
         """Run the migration"""
 
         self._setup()
-
-        self.dry_run_complete = self._read_dry_file()
-
         self.full_run = full_run
-        if full_run and not self.dry_run_complete:
-            raise ValueError("Full run requested but dry run has not been completed.")
+
+        if full_run:
+            self.dry_run_complete = self._read_dry_file()
+
+            if not self.dry_run_complete:
+                logging.error("Dry run not completed. Cannot proceed with full run.")
+                raise ValueError("Full run requested but dry run has not been completed.")
+            logging.info(f"Confirmed dry run is complete by comparing hash file: {self.dry_run_complete}")
 
         logging.info(f"Starting migration with query: {self.query}")
         logging.info(f"This is a {'full' if full_run else 'dry'} run.")
@@ -188,22 +191,19 @@ class Migrator:
         return self.output_dir / "dry_run_hash.txt"
 
     def _hash(self):
-        """Hash the original records to check if the dry run has been completed"""
-
-        def make_hashable(lst: list[dict[str, Any]]) -> tuple:
-            return tuple(tuple(sorted(d.items())) for d in lst)
-
-        return hash(make_hashable(self.original_records))
+        """Hash the records"""
+        return hash_records(self.original_records)
 
     def _read_dry_file(self):
         """Read the dry run file to check if the dry run has been completed"""
         dry_file = self._dry_file_path()
 
         if not dry_file.exists():
+            print(f"Dry run file {dry_file} does not exist.")
             return False
 
         with open(dry_file, "r") as f:
-            hash_data = int(f.read())
+            hash_data = f.read()
 
         return hash_data == self._hash()
 

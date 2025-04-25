@@ -4,6 +4,7 @@ import unittest
 import logging
 from pathlib import Path
 from aind_data_migration_utils.utils import setup_logger
+from aind_data_migration_utils.utils import hash_records
 
 
 class TestUtils(unittest.TestCase):
@@ -41,6 +42,38 @@ class TestUtils(unittest.TestCase):
         with open(log_files[0], "r") as log_file:
             log_content = log_file.read()
             self.assertIn(test_message, log_content, "Log message not found in log file")
+
+    def test_hash_records_with_empty_list(self):
+        """Test that hash_records works with an empty list"""
+        result = hash_records([])
+        # Hash of an empty list should be consistent
+        self.assertEqual(result, "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945")
+
+    def test_hash_records_with_sample_data(self):
+        """Test that hash_records produces expected output with sample data"""
+        records = [
+            {"name": "record1", "last_modified": "2023-01-01", "extra_field": "value"},
+            {"name": "record2", "last_modified": "2023-01-02", "another_field": 123},
+        ]
+        result = hash_records(records)
+        # The hash should only consider name and last_modified fields
+        expected = hash_records(
+            [{"name": "record1", "last_modified": "2023-01-01"}, {"name": "record2", "last_modified": "2023-01-02"}]
+        )
+        self.assertEqual(result, expected)
+
+    def test_hash_records_order_independence(self):
+        """Test that hash_records is not affected by the order of records"""
+        records1 = [
+            {"name": "record1", "last_modified": "2023-01-01"},
+            {"name": "record2", "last_modified": "2023-01-02"},
+        ]
+        records2 = [
+            {"name": "record2", "last_modified": "2023-01-02"},
+            {"name": "record1", "last_modified": "2023-01-01"},
+        ]
+        # Different order should produce different hashes
+        self.assertNotEqual(hash_records(records1), hash_records(records2))
 
 
 if __name__ == "__main__":

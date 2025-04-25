@@ -3,6 +3,10 @@
 import logging
 from datetime import datetime
 from pathlib import Path
+from typing import Any
+import json
+from hashlib import sha256
+from typing import List
 
 
 def setup_logger(logfile_path: Path):
@@ -37,3 +41,14 @@ def setup_logger(logfile_path: Path):
     # add the handlers to logger
     logger.addHandler(ch)
     logger.addHandler(fh)
+
+
+def hash_records(original_records: List[dict[str, Any]]) -> str:
+    """Hash metadata records to check if the dry run has been completed"""
+
+    minimal_records = []
+    for record in original_records:
+        minimal_records.append({"name": record["name"], "last_modified": record["last_modified"]})
+
+    hash_string = json.dumps(minimal_records, separators=(',', ':'), ensure_ascii=True)
+    return sha256(hash_string.encode('utf-8')).hexdigest()
