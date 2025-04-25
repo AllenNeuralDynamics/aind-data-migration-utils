@@ -1,12 +1,13 @@
 """Migration script wrapper"""
 
-from pathlib import Path
-from typing import List, Callable
 import logging
-import pandas as pd
+from pathlib import Path
+from typing import Callable, List
 
+import pandas as pd
 from aind_data_access_api.document_db import MetadataDbClient
-from aind_data_migration_utils.utils import setup_logger, hash_records
+
+from aind_data_migration_utils.utils import hash_records, setup_logger
 
 ALWAYS_KEEP_FIELDS = ["_id", "name", "location"]
 

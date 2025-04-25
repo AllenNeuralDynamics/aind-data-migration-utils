@@ -1,12 +1,11 @@
 """Utility functions"""
 
+import json
 import logging
 from datetime import datetime
-from pathlib import Path
-from typing import Any
-import json
 from hashlib import sha256
-from typing import List
+from pathlib import Path
+from typing import Any, List
 
 
 def setup_logger(logfile_path: Path):

@@ -2,11 +2,9 @@
 
 import unittest
 from pathlib import Path
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, mock_open, patch
+
 from aind_data_migration_utils.migrate import Migrator
-import json
-from unittest.mock import patch, MagicMock, mock_open
-from hashlib import sha256
 
 
 class TestMigrator(unittest.TestCase):

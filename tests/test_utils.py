@@ -1,10 +1,10 @@
 """Tests for the utility functions in aind_data_migration_utils.utils"""
 
-import unittest
 import logging
+import unittest
 from pathlib import Path
-from aind_data_migration_utils.utils import setup_logger
-from aind_data_migration_utils.utils import hash_records
+
+from aind_data_migration_utils.utils import hash_records, setup_logger
 
 
 class TestUtils(unittest.TestCase):
