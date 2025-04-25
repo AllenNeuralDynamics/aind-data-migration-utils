@@ -13,7 +13,7 @@ query = {
 def update_label(record):
     """Update the label of the record"""
     record["label"] = f"{datetime.now()}"
-    logging.info(f"Updated {record["name"]} label to {record["label"]}")
+    logging.info(f"Updated {record['name']} label to {record['label']}")
     return record
 
 
