@@ -1,3 +1,4 @@
+"""Test file for checking that hashes work properly"""
 from aind_data_migration_utils.migrate import Migrator
 from datetime import datetime
 import argparse
