@@ -61,7 +61,7 @@ class TestMigrator(unittest.TestCase):
         self.assertEqual(migrator.log_dir, migrator.output_dir / "logs")
         mock_setup_logger.assert_called_once_with(migrator.log_dir)
         MockMetadataDbClient.assert_called_once_with(
-            host="api.allenneuraldynamics-test.org", database="test", collection="data_assets"
+            host="api.allenneuraldynamics-test.org", database="metadata_index", collection="data_assets"
         )
 
     @patch("aind_data_migration_utils.migrate.setup_logger")
@@ -86,7 +86,8 @@ class TestMigrator(unittest.TestCase):
 
     @patch("aind_data_migration_utils.migrate.setup_logger")
     @patch("aind_data_migration_utils.migrate.MetadataDbClient")
-    def test_run_full_run_without_dry_run(self, MockMetadataDbClient, mock_setup_logger):
+    @patch("pathlib.Path.exists", return_value=False)
+    def test_run_full_run_without_dry_run(self, mock_exists, MockMetadataDbClient, mock_setup_logger):
         """Test the run method with a full run without a dry run"""
         query = {"field": "value"}
         migration_callback = MagicMock()
@@ -379,8 +380,7 @@ class TestMigrator(unittest.TestCase):
     @patch("aind_data_migration_utils.migrate.setup_logger")
     @patch("aind_data_migration_utils.migrate.MetadataDbClient")
     @patch("pathlib.Path.exists")
-    @patch("builtins.print")
-    def test_read_dry_file_does_not_exist(self, mock_print, mock_exists, MockMetadataDbClient, mock_setup_logger):
+    def test_read_dry_file_does_not_exist(self, mock_exists, MockMetadataDbClient, mock_setup_logger):
         """Test the _read_dry_file method when file doesn't exist"""
         query = {"field": "value"}
         migration_callback = MagicMock()
@@ -390,7 +390,6 @@ class TestMigrator(unittest.TestCase):
         result = migrator._read_dry_file()
 
         self.assertFalse(result)
-        mock_print.assert_called_once()
 
     @patch("aind_data_migration_utils.migrate.setup_logger")
     @patch("aind_data_migration_utils.migrate.MetadataDbClient")
@@ -408,3 +407,72 @@ class TestMigrator(unittest.TestCase):
         mock_file.assert_called_once_with(migrator._dry_file_path(), "w")
         mock_file().write.assert_called_once_with("hash123")
         mock_log_info.assert_called_once()
+
+    @patch("aind_data_migration_utils.migrate.setup_logger")
+    @patch("aind_data_migration_utils.migrate.MetadataDbClient")
+    @patch("pathlib.Path.exists", return_value=True)
+    @patch("builtins.open", new_callable=mock_open, read_data="hash123")
+    @patch("logging.error")
+    @patch("logging.info")
+    def test_run_full_run_with_successful_dry_run(
+        self, mock_log_info, mock_log_error, mock_file, mock_exists, MockMetadataDbClient, mock_setup_logger
+    ):
+        """Test the run method with a full run when dry run has been completed"""
+        query = {"field": "value"}
+        migration_callback = MagicMock()
+        migrator = Migrator(query, migration_callback, prod=True, path="test_path")
+
+        # Set up mocks
+        migrator._setup = MagicMock()
+        migrator._migrate = MagicMock()
+        migrator._upsert = MagicMock()
+        migrator._teardown = MagicMock()
+        migrator._hash = MagicMock(return_value="hash123")
+
+        # Run the migration
+        migrator.run(full_run=True)
+
+        # Verify method calls
+        migrator._setup.assert_called_once()
+        migrator._migrate.assert_called_once()
+        migrator._upsert.assert_called_once()
+        migrator._teardown.assert_called_once()
+        self.assertTrue(migrator.full_run)
+        self.assertTrue(migrator.dry_run_complete)
+        mock_log_error.assert_not_called()
+        # At least 3 info logs should have happened
+        self.assertGreaterEqual(mock_log_info.call_count, 3)
+
+    @patch("aind_data_migration_utils.migrate.setup_logger")
+    @patch("aind_data_migration_utils.migrate.MetadataDbClient")
+    @patch("pathlib.Path.exists", return_value=True)
+    @patch("builtins.open", new_callable=mock_open, read_data="hash456")
+    @patch("logging.error")
+    def test_run_full_run_with_mismatched_hash(
+        self, mock_log_error, mock_file, mock_exists, MockMetadataDbClient, mock_setup_logger
+    ):
+        """Test the run method with a full run when hash doesn't match"""
+        query = {"field": "value"}
+        migration_callback = MagicMock()
+        migrator = Migrator(query, migration_callback, prod=True, path="test_path")
+
+        # Set up mocks
+        migrator._setup = MagicMock()
+        migrator._migrate = MagicMock()
+        migrator._upsert = MagicMock()
+        migrator._teardown = MagicMock()
+        migrator._hash = MagicMock(return_value="hash123")
+
+        # Run should raise ValueError
+        with self.assertRaises(ValueError) as context:
+            migrator.run(full_run=True)
+
+        # Verify error message
+        self.assertEqual(str(context.exception), "Full run requested but dry run has not been completed.")
+
+        # Verify method calls
+        migrator._setup.assert_called_once()
+        migrator._migrate.assert_not_called()
+        migrator._upsert.assert_not_called()
+        migrator._teardown.assert_not_called()
+        mock_log_error.assert_called_once()

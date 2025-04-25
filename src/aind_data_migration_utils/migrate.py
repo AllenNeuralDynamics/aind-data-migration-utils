@@ -197,14 +197,17 @@ class Migrator:
     def _read_dry_file(self):
         """Read the dry run file to check if the dry run has been completed"""
         dry_file = self._dry_file_path()
+        logging.info(f"Reading dry run file {dry_file}")
 
         if not dry_file.exists():
-            print(f"Dry run file {dry_file} does not exist.")
+            logging.info(f"Dry run file {dry_file} does not exist.")
             return False
 
         with open(dry_file, "r") as f:
             hash_data = f.read()
 
+        logging.info(f"Hash data read from dry run file: {hash_data}")
+        logging.info(f"Hash data for current run: {self._hash()}")
         return hash_data == self._hash()
 
     def _write_dry_file(self):

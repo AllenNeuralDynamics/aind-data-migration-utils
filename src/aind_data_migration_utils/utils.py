@@ -50,5 +50,5 @@ def hash_records(original_records: List[dict[str, Any]]) -> str:
     for record in original_records:
         minimal_records.append({"name": record["name"], "last_modified": record["last_modified"]})
 
-    hash_string = json.dumps(minimal_records, separators=(',', ':'), ensure_ascii=True)
-    return sha256(hash_string.encode('utf-8')).hexdigest()
+    hash_string = json.dumps(minimal_records, separators=(",", ":"), ensure_ascii=True)
+    return sha256(hash_string.encode("utf-8")).hexdigest()
