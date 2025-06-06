@@ -15,7 +15,9 @@ def setup_logger(logfile_path: Path):
     logfile_path.mkdir(parents=True, exist_ok=True)
 
     # set up logger with given file path
-    log_file_name = logfile_path / ("log_" + datetime.now().strftime("%Y%m%d_%H%M%S") + ".log")
+    log_file_name = logfile_path / (
+        "log_" + datetime.now().strftime("%Y%m%d_%H%M%S") + ".log"
+    )
     logger = logging.getLogger()
     logger.setLevel(logging.INFO)
 
@@ -33,7 +35,9 @@ def setup_logger(logfile_path: Path):
     ch.setLevel(logging.DEBUG)
 
     # create formatter and add it to the handlers
-    formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+    formatter = logging.Formatter(
+        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    )
     ch.setFormatter(formatter)
     fh.setFormatter(formatter)
 
@@ -47,7 +51,9 @@ def hash_records(original_records: List[dict[str, Any]]) -> str:
 
     minimal_records = []
     for record in original_records:
-        minimal_records.append({"name": record["name"], "last_modified": record["last_modified"]})
+        minimal_records.append({"name": record["name"]})
 
-    hash_string = json.dumps(minimal_records, separators=(",", ":"), ensure_ascii=True)
+    hash_string = json.dumps(
+        minimal_records, separators=(",", ":"), ensure_ascii=True
+    )
     return sha256(hash_string.encode("utf-8")).hexdigest()
