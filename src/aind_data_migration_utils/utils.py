@@ -19,26 +19,6 @@ def setup_logger(logfile_path: Path):
     logger = logging.getLogger()
     logger.setLevel(logging.INFO)
 
-# Remove all handlers associated with the logger object
-    for handler in logger.handlers[:]:
-        logger.removeHandler(handler)
-        handler.close()
-
-# Remove all handlers associated with the logger object
-    for handler in logger.handlers[:]:
-        logger.removeHandler(handler)
-        handler.close()
-
-# Remove all handlers associated with the logger object
-    for handler in logger.handlers[:]:
-        logger.removeHandler(handler)
-        handler.close()
-
-# Remove all handlers associated with the logger object
-    for handler in logger.handlers[:]:
-        logger.removeHandler(handler)
-        handler.close()
-
     # Remove all handlers associated with the logger object
     for handler in logger.handlers[:]:
         logger.removeHandler(handler)
