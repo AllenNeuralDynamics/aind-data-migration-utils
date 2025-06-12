@@ -96,15 +96,9 @@ class Migrator:
             self.dry_run_complete = self._read_dry_file()
 
             if not self.dry_run_complete:
-                logging.error(
-                    "Dry run not completed. Cannot proceed with full run."
-                )
-                raise ValueError(
-                    "Full run requested but dry run has not been completed."
-                )
-            logging.info(
-                f"Confirmed dry run is complete by comparing hash file: {self.dry_run_complete}"
-            )
+                logging.error("Dry run not completed. Cannot proceed with full run.")
+                raise ValueError("Full run requested but dry run has not been completed.")
+            logging.info(f"Confirmed dry run is complete by comparing hash file: {self.dry_run_complete}")
 
         logging.info(f"Starting migration with query: {self.query}")
         logging.info(f"This is a {'full' if full_run else 'dry'} run.")
@@ -180,9 +174,7 @@ class Migrator:
                 response = self.client.upsert_one_docdb_record(record)
 
                 if response.status_code == 200:
-                    logging.info(
-                        f"Record {record['name']} migrated successfully"
-                    )
+                    logging.info(f"Record {record['name']} migrated successfully")
                     self.results.append(
                         {
                             "name": record["name"],
@@ -191,9 +183,7 @@ class Migrator:
                         }
                     )
                 else:
-                    logging.info(
-                        f"Record {record['name']} upsert error: {response.text}"
-                    )
+                    logging.info(f"Record {record['name']} upsert error: {response.text}")
                     self.results.append(
                         {
                             "name": record["name"],
@@ -202,9 +192,7 @@ class Migrator:
                         }
                     )
             else:
-                logging.info(
-                    f"Dry run: Record {record['name']} would be migrated"
-                )
+                logging.info(f"Dry run: Record {record['name']} would be migrated")
                 self.results.append(
                     {
                         "name": record["name"],
@@ -217,12 +205,8 @@ class Migrator:
         """Teardown the migration"""
 
         if self.full_run:
-            logging.info(
-                f"Migration succeeded for {len([r for r in self.results if r['status'] == 'success'])} records"
-            )
-            logging.info(
-                f"Migration failed for {len([r for r in self.results if r['status'] == 'failed'])} records"
-            )
+            logging.info(f"Migration succeeded for {len([r for r in self.results if r['status'] == 'success'])} records")
+            logging.info(f"Migration failed for {len([r for r in self.results if r['status'] == 'failed'])} records")
         else:
             logging.info("Dry run complete.")
             self.dry_run_complete = True
