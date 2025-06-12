@@ -199,7 +199,9 @@ class Migrator:
         """Teardown the migration"""
 
         if self.full_run:
-            logging.info(f"Migration succeeded for {len([r for r in self.results if r['status'] == 'success'])} records")
+            logging.info(
+                f"Migration succeeded for {len([r for r in self.results if r['status'] == 'success'])} records"
+            )
             logging.info(f"Migration failed for {len([r for r in self.results if r['status'] == 'failed'])} records")
         else:
             logging.info("Dry run complete.")
