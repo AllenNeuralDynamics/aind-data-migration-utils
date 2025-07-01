@@ -205,11 +205,12 @@ class Migrator:
             return False
 
         with open(dry_file, "r") as f:
-            hash_data = f.read()
+            hash_lines = f.read().strip().split('\n')
 
-        logging.info(f"Hash data read from dry run file: {hash_data}")
-        logging.info(f"Hash data for current run: {self._hash()}")
-        return hash_data == self._hash()
+        current_hash = self._hash()
+        logging.info(f"Hash data read from dry run file: {hash_lines}")
+        logging.info(f"Hash data for current run: {current_hash}")
+        return current_hash in hash_lines
 
     def _write_dry_file(self):
         """Write a hashed file indicating that the dry run has been completed"""
@@ -217,6 +218,6 @@ class Migrator:
 
         hash_data = self._hash()
 
-        with open(dry_file, "w") as f:
-            f.write(str(hash_data))
-        logging.info(f"Hash data for dry run written to {dry_file}")
+        with open(dry_file, "a") as f:
+            f.write(str(hash_data) + '\n')
+        logging.info(f"Hash data for dry run appended to {dry_file}")

@@ -405,8 +405,8 @@ class TestMigrator(unittest.TestCase):
 
         migrator._write_dry_file()
 
-        mock_file.assert_called_once_with(migrator._dry_file_path(), "w")
-        mock_file().write.assert_called_once_with("hash123")
+        mock_file.assert_called_once_with(migrator._dry_file_path(), "a")
+        mock_file().write.assert_called_once_with("hash123\n")
         mock_log_info.assert_called_once()
 
     @patch("aind_data_migration_utils.migrate.setup_logger")
