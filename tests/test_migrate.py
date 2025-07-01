@@ -486,12 +486,14 @@ class TestMigrator(unittest.TestCase):
         query = {"field": "value"}
         migration_callback = MagicMock()
         migrator = Migrator(query, migration_callback, prod=True, path="test_path")
-        
+
         # Mock the client to raise RequestException on retrieve_docdb_records call
-        migrator.client.retrieve_docdb_records = MagicMock(side_effect=requests.exceptions.RequestException("Connection error"))
-        
+        migrator.client.retrieve_docdb_records = MagicMock(
+            side_effect=requests.exceptions.RequestException("Connection error")
+        )
+
         migrator._check_and_establish_client()
-        
+
         # Should have called retrieve_docdb_records once (which failed)
         migrator.client.retrieve_docdb_records.assert_called_once_with(filter_query={"_id": "test"}, limit=1)
         # Should have created a new client (MockMetadataDbClient called twice: init + recreation)
