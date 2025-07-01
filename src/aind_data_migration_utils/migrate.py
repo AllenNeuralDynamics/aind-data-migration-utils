@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Callable, List
 
 import pandas as pd
+import requests
 from aind_data_access_api.document_db import MetadataDbClient
 
 from aind_data_migration_utils.utils import hash_records, setup_logger
@@ -48,11 +49,6 @@ class Migrator:
         self.test_mode = test_mode
 
         self.prod = prod
-        self.client = MetadataDbClient(
-            host="api.allenneuraldynamics.org" if prod else "api.allenneuraldynamics-test.org",
-            database="metadata_index",
-            collection="data_assets",
-        )
 
         self.query = query
         self.migration_callback = migration_callback
@@ -63,6 +59,26 @@ class Migrator:
 
         self.original_records = []
         self.results = []
+
+        # Initialize the client
+        self._check_and_establish_client()
+
+    def _check_and_establish_client(self):
+        """Check and establish database client connection if needed"""
+        # Test existing connection with a simple query, recreate if it fails
+        if hasattr(self, "client") and self.client is not None:
+            try:
+                self.client.retrieve_docdb_records(filter_query={"_id": "test"}, limit=1)
+                return  # Connection is good
+            except requests.exceptions.RequestException:
+                pass  # Connection failed, will recreate below
+
+        # Create new client connection
+        self.client = MetadataDbClient(
+            host=("api.allenneuraldynamics.org" if self.prod else "api.allenneuraldynamics-test.org"),
+            database="metadata_index",
+            collection="data_assets",
+        )
 
     def run(self, full_run: bool = False):
         """Run the migration"""
@@ -92,6 +108,9 @@ class Migrator:
         if not self.original_records:
             raise ValueError("No original records to revert to.")
 
+        # Ensure client connection is active
+        self._check_and_establish_client()
+
         for record in self.original_records:
             logging.info(f"Reverting record {record['name']}")
 
@@ -99,6 +118,9 @@ class Migrator:
 
     def _setup(self):
         """Setup the migration"""
+
+        # Ensure client connection is active
+        self._check_and_establish_client()
 
         if self.files:
             projection = {file: 1 for file in self.files}
@@ -135,6 +157,10 @@ class Migrator:
 
     def _upsert(self):
         """Upsert the data"""
+
+        # Ensure client connection is active before upserting
+        if self.full_run:
+            self._check_and_establish_client()
 
         for record in self.migrated_records:
 
