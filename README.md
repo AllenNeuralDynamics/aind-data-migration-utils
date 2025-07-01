@@ -76,10 +76,10 @@ if __name__ == "__main__":
     migrator.run(full_run=args.full_run)
 ```
 
-Call your code to run the dry run
+Call your code to run the dry run. You can run multiple dry runs as needed.
 
 ```bash
 python run.py
 ```
 
-Pass the `--full-run` argument to push changes to DocDB.
+After completing a dry run for your specific query, pass the `--full-run` argument to push changes to DocDB.
