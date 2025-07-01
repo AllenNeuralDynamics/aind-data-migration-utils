@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import List, Callable
 import logging
 import pandas as pd
+import warnings
 
 from aind_data_access_api.document_db import MetadataDbClient
 from aind_data_migration_utils.utils import setup_logger
@@ -106,7 +107,14 @@ class Migrator:
 
         for record in self.original_records:
             try:
-                self.migrated_records.append(self.migration_callback(record))
+                original_record = record.copy()
+                new_record = self.migration_callback(record)
+
+                if original_record == new_record:
+                    logging.warning(
+                        f"Record {record['name']} has not changed after migration. Skipping upsert."
+                    )
+                self.migrated_records.append(new_record)
             except Exception as e:
                 logging.error(f"Error migrating record {record['name']}: {e}")
                 self.results.append(

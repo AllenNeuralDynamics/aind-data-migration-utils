@@ -100,12 +100,12 @@ class TestMigrator(unittest.TestCase):
         migration_callback = MagicMock()
         migrator = Migrator(query, migration_callback, prod=True, path="test_path")
 
-        migrator.original_records = [{"_id": "123"}]
+        migrator.original_records = [{"_id": "123", "name": "test_record"}]
         migrator.client.upsert_one_docdb_record = MagicMock()
 
         migrator.revert()
 
-        migrator.client.upsert_one_docdb_record.assert_called_once_with({"_id": "123"})
+        migrator.client.upsert_one_docdb_record.assert_called_once_with({"_id": "123", "name": "test_record"})
 
     @patch("aind_data_migration_utils.migrate.setup_logger")
     @patch("aind_data_migration_utils.migrate.MetadataDbClient")
@@ -133,7 +133,7 @@ class TestMigrator(unittest.TestCase):
         migrator._setup()
 
         migrator.client.retrieve_docdb_records.assert_called_once_with(
-            filter_query=query, projection={"file1": 1, "file2": 1, "_id": 1, "name": 1, "location": 1}, limit=0
+            filter_query=query, projection={"file1": 1, "file2": 1, "name": 1, "location": 1}, limit=0
         )
 
     @patch("aind_data_migration_utils.migrate.setup_logger")
@@ -177,7 +177,30 @@ class TestMigrator(unittest.TestCase):
 
         migrator._migrate()
 
-        self.assertEqual(migrator.results, [{"_id": "123", "status": "failed", "notes": "Migration error"}])
+        self.assertEqual(migrator.results, [{"name": "old_name", "status": "failed", "notes": "Migration error"}])
+
+    @patch("aind_data_migration_utils.migrate.setup_logger")
+    @patch("aind_data_migration_utils.migrate.MetadataDbClient")
+    def test_migrate_with_unchanged_record(self, MockMetadataDbClient, mock_setup_logger):
+        """ Test the _migrate method with an unchanged record """
+        query = {"field": "value"}
+        # Migration callback returns the same record (unchanged)
+        migration_callback = MagicMock(return_value={"_id": "123", "name": "old_name"})
+        migrator = Migrator(query, migration_callback, prod=True, path="test_path")
+
+        migrator.original_records = [{"_id": "123", "name": "old_name"}]
+
+        with patch("aind_data_migration_utils.migrate.logging") as mock_logging:
+            migrator._migrate()
+
+            # Record should still be added to migrated_records even if unchanged
+            self.assertEqual(migrator.migrated_records, [{"_id": "123", "name": "old_name"}])
+            # Should log a warning for unchanged record
+            mock_logging.warning.assert_called_once_with(
+                "Record old_name has not changed after migration. Skipping upsert."
+            )
+            # No results should be added for unchanged records (they're handled normally)
+            self.assertEqual(migrator.results, [])
 
     @patch("aind_data_migration_utils.migrate.setup_logger")
     @patch("aind_data_migration_utils.migrate.MetadataDbClient")
@@ -194,7 +217,7 @@ class TestMigrator(unittest.TestCase):
         migrator._upsert()
 
         migrator.client.upsert_one_docdb_record.assert_called_once_with({"_id": "123", "name": "new_name"})
-        self.assertEqual(migrator.results, [{"_id": "123", "status": "success", "notes": ""}])
+        self.assertEqual(migrator.results, [{"name": "new_name", "status": "success", "notes": ""}])
 
     @patch("aind_data_migration_utils.migrate.setup_logger")
     @patch("aind_data_migration_utils.migrate.MetadataDbClient")
@@ -209,7 +232,7 @@ class TestMigrator(unittest.TestCase):
 
         migrator._upsert()
 
-        self.assertEqual(migrator.results, [{"_id": "123", "status": "dry_run", "notes": ""}])
+        self.assertEqual(migrator.results, [{"name": "new_name", "status": "dry_run", "notes": ""}])
 
     @patch("aind_data_migration_utils.migrate.setup_logger")
     @patch("aind_data_migration_utils.migrate.MetadataDbClient")
@@ -245,7 +268,7 @@ class TestMigrator(unittest.TestCase):
         migrator._upsert()
 
         migrator.client.upsert_one_docdb_record.assert_called_once_with({"_id": "123", "name": "new_name"})
-        self.assertEqual(migrator.results, [{"_id": "123", "status": "failed", "notes": "Internal Server Error"}])
+        self.assertEqual(migrator.results, [{"name": "new_name", "status": "failed", "notes": "Internal Server Error"}])
 
     @patch("aind_data_migration_utils.migrate.setup_logger")
     @patch("aind_data_migration_utils.migrate.MetadataDbClient")
@@ -262,7 +285,10 @@ class TestMigrator(unittest.TestCase):
 
         self.assertEqual(
             migrator.results,
-            [{"_id": "123", "status": "dry_run", "notes": ""}, {"_id": "456", "status": "dry_run", "notes": ""}],
+            [
+                {"name": "new_name1", "status": "dry_run", "notes": ""},
+                {"name": "new_name2", "status": "dry_run", "notes": ""}
+            ],
         )
 
     @patch("aind_data_migration_utils.migrate.setup_logger")
