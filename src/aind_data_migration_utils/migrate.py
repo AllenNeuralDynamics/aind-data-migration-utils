@@ -205,7 +205,7 @@ class Migrator:
             return False
 
         with open(dry_file, "r") as f:
-            hash_lines = f.read().strip().split('\n')
+            hash_lines = f.read().strip().split("\n")
 
         current_hash = self._hash()
         logging.info(f"Hash data read from dry run file: {hash_lines}")
@@ -219,5 +219,5 @@ class Migrator:
         hash_data = self._hash()
 
         with open(dry_file, "a") as f:
-            f.write(str(hash_data) + '\n')
+            f.write(str(hash_data) + "\n")
         logging.info(f"Hash data for dry run appended to {dry_file}")
