@@ -138,3 +138,6 @@ dmypy.json
 # MacOs
 **/.DS_Store
 .vscode/settings.json
+scripts/results.csv
+scripts/dry_run_hash.txt
+test_path/*
