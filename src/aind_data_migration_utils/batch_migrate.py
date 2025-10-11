@@ -135,8 +135,6 @@ class BatchMigrator:
 
         # Process record IDs in batches
         num_batches = (len(self.record_ids) + BATCH_SIZE - 1) // BATCH_SIZE
-        if self.test_mode:
-            num_batches = min(1, num_batches)
 
         for i in range(num_batches):
             start_idx = i * BATCH_SIZE
