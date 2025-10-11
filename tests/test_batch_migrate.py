@@ -277,9 +277,7 @@ class TestBatchMigrator(unittest.TestCase):
         migrator._upsert()
 
         migrator.client.upsert_list_of_docdb_records.assert_called_once_with([{"name": "new_name"}])
-        self.assertEqual(
-            migrator.results, [{"name": "new_name", "status": "failed", "notes": "Internal Server Error"}]
-        )
+        self.assertEqual(migrator.results, [{"name": "new_name", "status": "failed", "notes": "Internal Server Error"}])
 
     @patch("aind_data_migration_utils.batch_migrate.setup_logger")
     @patch("aind_data_migration_utils.batch_migrate.MetadataDbClient")

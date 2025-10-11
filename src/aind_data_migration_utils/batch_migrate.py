@@ -116,7 +116,7 @@ class BatchMigrator:
 
         # Process in batches
         for i in range(0, len(self.original_records), BATCH_SIZE):
-            batch = self.original_records[i:i + BATCH_SIZE]
+            batch = self.original_records[i: i + BATCH_SIZE]
             logging.info(f"Reverting batch of {len(batch)} records")
 
             self.client.upsert_list_of_docdb_records(batch)
@@ -185,7 +185,7 @@ class BatchMigrator:
 
         # Process migrated records in batches
         for i in range(0, len(self.migrated_records), BATCH_SIZE):
-            batch = self.migrated_records[i:i + BATCH_SIZE]
+            batch = self.migrated_records[i: i + BATCH_SIZE]
 
             if self.full_run:
                 self._upsert_batch_full_run(batch)
@@ -200,7 +200,7 @@ class BatchMigrator:
             # Handle response - it returns a list of responses
             for idx, record in enumerate(batch):
                 response = responses[idx] if isinstance(responses, list) else responses
-                if hasattr(response, 'status_code') and response.status_code == 200:
+                if hasattr(response, "status_code") and response.status_code == 200:
                     logging.info(f"Record {record['name']} migrated successfully")
                     self.results.append(
                         {
@@ -210,7 +210,7 @@ class BatchMigrator:
                         }
                     )
                 else:
-                    error_text = response.text if hasattr(response, 'text') else str(response)
+                    error_text = response.text if hasattr(response, "text") else str(response)
                     logging.error(f"Record {record['name']} upsert error: {error_text}")
                     self.results.append(
                         {
