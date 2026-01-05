@@ -135,7 +135,9 @@ class TestMigrator(unittest.TestCase):
 
         migrator._setup()
 
-        migrator.client.retrieve_docdb_records.assert_called_once_with(
+        # Connection check call + actual query call
+        self.assertEqual(migrator.client.retrieve_docdb_records.call_count, 2)
+        migrator.client.retrieve_docdb_records.assert_any_call(
             filter_query=query, projection={"file1": 1, "file2": 1, "name": 1, "location": 1}, limit=0
         )
 
@@ -152,7 +154,9 @@ class TestMigrator(unittest.TestCase):
 
         migrator._setup()
 
-        migrator.client.retrieve_docdb_records.assert_called_once_with(filter_query=query, projection=None, limit=0)
+        # Connection check call + actual query call
+        self.assertEqual(migrator.client.retrieve_docdb_records.call_count, 2)
+        migrator.client.retrieve_docdb_records.assert_any_call(filter_query=query, projection=None, limit=0)
 
     @patch("aind_data_migration_utils.migrate.setup_logger")
     @patch("aind_data_migration_utils.migrate.MetadataDbClient")
@@ -498,3 +502,204 @@ class TestMigrator(unittest.TestCase):
         migrator.client.retrieve_docdb_records.assert_called_once_with(filter_query={"_id": "test"}, limit=1)
         # Should have created a new client (MockMetadataDbClient called twice: init + recreation)
         self.assertEqual(MockMetadataDbClient.call_count, 2)
+
+    @patch("aind_data_migration_utils.migrate.setup_logger")
+    @patch("aind_data_migration_utils.migrate.MetadataDbClient")
+    def test_migrator_initialization_with_id_list(self, MockMetadataDbClient, mock_setup_logger):
+        """Test the initialization of the Migrator class with id_list"""
+        id_list = ["id1", "id2", "id3"]
+        migration_callback = MagicMock()
+        migrator = Migrator(id_list=id_list, migration_callback=migration_callback, prod=True, path="test_path")
+
+        self.assertEqual(migrator.id_list, id_list)
+        self.assertEqual(migrator.id_batch_size, 100)  # Default value
+        self.assertIsNone(migrator.query)
+        self.assertEqual(migrator.migration_callback, migration_callback)
+
+    @patch("aind_data_migration_utils.migrate.setup_logger")
+    @patch("aind_data_migration_utils.migrate.MetadataDbClient")
+    def test_migrator_initialization_with_id_list_and_batch_size(self, MockMetadataDbClient, mock_setup_logger):
+        """Test the initialization of the Migrator class with id_list and custom batch_size"""
+        id_list = ["id1", "id2", "id3"]
+        migration_callback = MagicMock()
+        migrator = Migrator(
+            id_list=id_list, migration_callback=migration_callback, id_batch_size=50, prod=True, path="test_path"
+        )
+
+        self.assertEqual(migrator.id_list, id_list)
+        self.assertEqual(migrator.id_batch_size, 50)
+        self.assertIsNone(migrator.query)
+
+    @patch("aind_data_migration_utils.migrate.setup_logger")
+    @patch("aind_data_migration_utils.migrate.MetadataDbClient")
+    def test_migrator_initialization_both_query_and_id_list(self, MockMetadataDbClient, mock_setup_logger):
+        """Test that providing both query and id_list raises ValueError"""
+        query = {"field": "value"}
+        id_list = ["id1", "id2"]
+        migration_callback = MagicMock()
+
+        with self.assertRaises(ValueError) as context:
+            Migrator(query=query, id_list=id_list, migration_callback=migration_callback, prod=True, path="test_path")
+
+        self.assertIn("Cannot provide both 'query' and 'id_list'", str(context.exception))
+
+    @patch("aind_data_migration_utils.migrate.setup_logger")
+    @patch("aind_data_migration_utils.migrate.MetadataDbClient")
+    def test_migrator_initialization_neither_query_nor_id_list(self, MockMetadataDbClient, mock_setup_logger):
+        """Test that providing neither query nor id_list raises ValueError"""
+        migration_callback = MagicMock()
+
+        with self.assertRaises(ValueError) as context:
+            Migrator(migration_callback=migration_callback, prod=True, path="test_path")
+
+        self.assertIn("Must provide either 'query' or 'id_list'", str(context.exception))
+
+    @patch("aind_data_migration_utils.migrate.setup_logger")
+    @patch("aind_data_migration_utils.migrate.MetadataDbClient")
+    def test_migrator_initialization_no_migration_callback(self, MockMetadataDbClient, mock_setup_logger):
+        """Test that not providing migration_callback raises ValueError"""
+        query = {"field": "value"}
+
+        with self.assertRaises(ValueError) as context:
+            Migrator(query=query, prod=True, path="test_path")
+
+        self.assertIn("'migration_callback' parameter is required", str(context.exception))
+
+    @patch("aind_data_migration_utils.migrate.setup_logger")
+    @patch("aind_data_migration_utils.migrate.MetadataDbClient")
+    def test_setup_with_id_list(self, MockMetadataDbClient, mock_setup_logger):
+        """Test the _setup method with id_list"""
+        id_list = ["id1", "id2", "id3"]
+        migration_callback = MagicMock()
+        migrator = Migrator(id_list=id_list, migration_callback=migration_callback, prod=True, path="test_path")
+        migrator.test_mode = False
+
+        migrator.client.retrieve_docdb_records = MagicMock(return_value=[{"name": "record1"}])
+
+        migrator._setup()
+
+        # Connection check call + actual query call
+        self.assertEqual(migrator.client.retrieve_docdb_records.call_count, 2)
+        migrator.client.retrieve_docdb_records.assert_any_call(
+            filter_query={"_id": {"$in": ["id1", "id2", "id3"]}}, projection=None, limit=3
+        )
+        self.assertEqual(len(migrator.original_records), 1)
+
+    @patch("aind_data_migration_utils.migrate.setup_logger")
+    @patch("aind_data_migration_utils.migrate.MetadataDbClient")
+    def test_setup_with_id_list_batching(self, MockMetadataDbClient, mock_setup_logger):
+        """Test the _setup method with id_list that requires batching"""
+        id_list = [f"id{i}" for i in range(1, 251)]  # 250 IDs
+        migration_callback = MagicMock()
+        migrator = Migrator(
+            id_list=id_list, migration_callback=migration_callback, id_batch_size=100, prod=True, path="test_path"
+        )
+        migrator.test_mode = False
+
+        migrator.client.retrieve_docdb_records = MagicMock(return_value=[{"name": "record"}])
+
+        migrator._setup()
+
+        # Connection check call + 3 batch queries (100, 100, 50)
+        self.assertEqual(migrator.client.retrieve_docdb_records.call_count, 4)
+        # First batch: 100 IDs
+        migrator.client.retrieve_docdb_records.assert_any_call(
+            filter_query={"_id": {"$in": [f"id{i}" for i in range(1, 101)]}}, projection=None, limit=100
+        )
+        # Second batch: 100 IDs
+        migrator.client.retrieve_docdb_records.assert_any_call(
+            filter_query={"_id": {"$in": [f"id{i}" for i in range(101, 201)]}}, projection=None, limit=100
+        )
+        # Third batch: 50 IDs
+        migrator.client.retrieve_docdb_records.assert_any_call(
+            filter_query={"_id": {"$in": [f"id{i}" for i in range(201, 251)]}}, projection=None, limit=50
+        )
+
+    @patch("aind_data_migration_utils.migrate.setup_logger")
+    @patch("aind_data_migration_utils.migrate.MetadataDbClient")
+    def test_setup_with_id_list_test_mode(self, MockMetadataDbClient, mock_setup_logger):
+        """Test the _setup method with id_list in test mode"""
+        id_list = ["id1", "id2", "id3"]
+        migration_callback = MagicMock()
+        migrator = Migrator(
+            id_list=id_list, migration_callback=migration_callback, prod=True, path="test_path", test_mode=True
+        )
+
+        migrator.client.retrieve_docdb_records = MagicMock(return_value=[{"name": "record1"}])
+
+        migrator._setup()
+
+        # Connection check call + actual query call
+        # In test mode, should only process first ID
+        self.assertEqual(migrator.client.retrieve_docdb_records.call_count, 2)
+        migrator.client.retrieve_docdb_records.assert_any_call(
+            filter_query={"_id": {"$in": ["id1"]}}, projection=None, limit=1
+        )
+
+    @patch("aind_data_migration_utils.migrate.setup_logger")
+    @patch("aind_data_migration_utils.migrate.MetadataDbClient")
+    def test_setup_with_id_list_and_files(self, MockMetadataDbClient, mock_setup_logger):
+        """Test the _setup method with id_list and files projection"""
+        id_list = ["id1", "id2"]
+        migration_callback = MagicMock()
+        files = ["file1", "file2"]
+        migrator = Migrator(
+            id_list=id_list, migration_callback=migration_callback, files=files, prod=True, path="test_path"
+        )
+        migrator.test_mode = False
+
+        migrator.client.retrieve_docdb_records = MagicMock(return_value=[{"name": "record1"}])
+
+        migrator._setup()
+
+        # Connection check call + actual query call
+        # Should use projection with files and always_keep_fields
+        self.assertEqual(migrator.client.retrieve_docdb_records.call_count, 2)
+        migrator.client.retrieve_docdb_records.assert_any_call(
+            filter_query={"_id": {"$in": ["id1", "id2"]}},
+            projection={"file1": 1, "file2": 1, "name": 1, "location": 1},
+            limit=2,
+        )
+
+    @patch("aind_data_migration_utils.migrate.setup_logger")
+    @patch("aind_data_migration_utils.migrate.MetadataDbClient")
+    @patch("logging.info")
+    def test_run_with_id_list_logging(self, mock_log_info, MockMetadataDbClient, mock_setup_logger):
+        """Test that run() logs correctly when using id_list"""
+        id_list = ["id1", "id2", "id3"]
+        migration_callback = MagicMock()
+        migrator = Migrator(id_list=id_list, migration_callback=migration_callback, prod=True, path="test_path")
+
+        migrator._setup = MagicMock()
+        migrator._migrate = MagicMock()
+        migrator._upsert = MagicMock()
+        migrator._teardown = MagicMock()
+
+        migrator.run(full_run=False)
+
+        # Check that logging.info was called with id_list message
+        log_calls = [str(call) for call in mock_log_info.call_args_list]
+        id_list_log_found = any("Starting migration with 3 record IDs" in str(call) for call in log_calls)
+        self.assertTrue(id_list_log_found, "Should log message about id_list")
+
+    @patch("aind_data_migration_utils.migrate.setup_logger")
+    @patch("aind_data_migration_utils.migrate.MetadataDbClient")
+    def test_setup_with_id_list_empty_records(self, MockMetadataDbClient, mock_setup_logger):
+        """Test the _setup method with id_list when retrieve_docdb_records returns empty list"""
+        id_list = ["id1", "id2"]
+        migration_callback = MagicMock()
+        migrator = Migrator(id_list=id_list, migration_callback=migration_callback, prod=True, path="test_path")
+        migrator.test_mode = False
+
+        # Return empty list to test the "if records:" check
+        migrator.client.retrieve_docdb_records = MagicMock(return_value=[])
+
+        migrator._setup()
+
+        # Connection check call + actual query call
+        self.assertEqual(migrator.client.retrieve_docdb_records.call_count, 2)
+        migrator.client.retrieve_docdb_records.assert_any_call(
+            filter_query={"_id": {"$in": ["id1", "id2"]}}, projection=None, limit=2
+        )
+        # original_records should remain empty since no records were returned
+        self.assertEqual(len(migrator.original_records), 0)

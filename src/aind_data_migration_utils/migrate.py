@@ -18,19 +18,21 @@ class Migrator:
 
     def __init__(
         self,
-        query: dict,
-        migration_callback: Callable,
+        query: dict = None,
+        migration_callback: Callable = None,
         files: List[str] = [],
         prod: bool = True,
         test_mode: bool = False,
         path=".",
+        id_list: List[str] = None,
+        id_batch_size: int = 100,
     ):
         """Set up a migration script
 
         Parameters
         ----------
-        query: dict
-            MongoDB query to filter the records to migrate
+        query: dict, optional
+            MongoDB query to filter the records to migrate. Cannot be used with id_list.
         migration_callback : Callable
             Function that takes a metadata core file dict and returns the modified dict
         files : List[str], optional
@@ -39,7 +41,22 @@ class Migrator:
             Whether to run in the production docdb, by default True
         path : str, optional
             Path to subfolder where output files will be stored, by default "."
+        id_list : List[str], optional
+            List of record IDs to migrate. Cannot be used with query.
+        id_batch_size : int, optional
+            Batch size for processing id_list. Only relevant if id_list is provided. Default is 100.
+            Records are retrieved in batches to avoid URL length limits.
         """
+
+        # Validate that query and id_list are not both provided
+        if query is not None and id_list is not None:
+            raise ValueError("Cannot provide both 'query' and 'id_list' parameters. Use one or the other.")
+
+        if query is None and id_list is None:
+            raise ValueError("Must provide either 'query' or 'id_list' parameter.")
+
+        if migration_callback is None:
+            raise ValueError("'migration_callback' parameter is required.")
 
         self.output_dir = Path(path)
         self.output_dir.mkdir(parents=True, exist_ok=True)
@@ -51,6 +68,8 @@ class Migrator:
         self.prod = prod
 
         self.query = query
+        self.id_list = id_list
+        self.id_batch_size = id_batch_size
         self.migration_callback = migration_callback
 
         self.files = files
@@ -94,7 +113,10 @@ class Migrator:
                 raise ValueError("Full run requested but dry run has not been completed.")
             logging.info(f"Confirmed dry run is complete by comparing hash file: {self.dry_run_complete}")
 
-        logging.info(f"Starting migration with query: {self.query}")
+        if self.query is not None:
+            logging.info(f"Starting migration with query: {self.query}")
+        else:
+            logging.info(f"Starting migration with {len(self.id_list)} record IDs")
         logging.info(f"This is a {'full' if full_run else 'dry'} run.")
         logging.info(f"Pushing migration to {self.client.host}")
 
@@ -119,6 +141,9 @@ class Migrator:
     def _setup(self):
         """Setup the migration"""
 
+        # Ensure client connection is active
+        self._check_and_establish_client()
+
         if self.files:
             projection = {file: 1 for file in self.files}
             for field in ALWAYS_KEEP_FIELDS:
@@ -126,11 +151,33 @@ class Migrator:
         else:
             projection = None
 
-        self.original_records = self.client.retrieve_docdb_records(
-            filter_query=self.query,
-            projection=projection,
-            limit=1 if self.test_mode else 0,
-        )
+        if self.id_list is not None:
+            # Process IDs in batches to avoid URL length limits
+            self.original_records = []
+            id_list_to_process = self.id_list[:1] if self.test_mode else self.id_list
+            total_ids = len(id_list_to_process)
+
+            # Process in batches
+            for batch_start in range(0, total_ids, self.id_batch_size):
+                batch_end = min(batch_start + self.id_batch_size, total_ids)
+                batch_ids = id_list_to_process[batch_start:batch_end]
+
+                logging.info(f"Getting records in id_list, fetching {batch_start + 1}:{batch_end} of {total_ids}")
+
+                query = {"_id": {"$in": batch_ids}}
+                records = self.client.retrieve_docdb_records(
+                    filter_query=query,
+                    projection=projection,
+                    limit=len(batch_ids),
+                )
+                if records:
+                    self.original_records.extend(records)
+        else:
+            self.original_records = self.client.retrieve_docdb_records(
+                filter_query=self.query,
+                projection=projection,
+                limit=1 if self.test_mode else 0,
+            )
 
         logging.info(f"Retrieved {len(self.original_records)} records")
 
