@@ -135,7 +135,9 @@ class TestMigrator(unittest.TestCase):
 
         migrator._setup()
 
-        migrator.client.retrieve_docdb_records.assert_called_once_with(
+        # Connection check call + actual query call
+        self.assertEqual(migrator.client.retrieve_docdb_records.call_count, 2)
+        migrator.client.retrieve_docdb_records.assert_any_call(
             filter_query=query, projection={"file1": 1, "file2": 1, "name": 1, "location": 1}, limit=0
         )
 
@@ -152,7 +154,9 @@ class TestMigrator(unittest.TestCase):
 
         migrator._setup()
 
-        migrator.client.retrieve_docdb_records.assert_called_once_with(filter_query=query, projection=None, limit=0)
+        # Connection check call + actual query call
+        self.assertEqual(migrator.client.retrieve_docdb_records.call_count, 2)
+        migrator.client.retrieve_docdb_records.assert_any_call(filter_query=query, projection=None, limit=0)
 
     @patch("aind_data_migration_utils.migrate.setup_logger")
     @patch("aind_data_migration_utils.migrate.MetadataDbClient")
@@ -574,8 +578,9 @@ class TestMigrator(unittest.TestCase):
 
         migrator._setup()
 
-        # Should have called retrieve_docdb_records once with the batch query
-        migrator.client.retrieve_docdb_records.assert_called_once_with(
+        # Connection check call + actual query call
+        self.assertEqual(migrator.client.retrieve_docdb_records.call_count, 2)
+        migrator.client.retrieve_docdb_records.assert_any_call(
             filter_query={"_id": {"$in": ["id1", "id2", "id3"]}}, projection=None, limit=3
         )
         self.assertEqual(len(migrator.original_records), 1)
@@ -595,8 +600,8 @@ class TestMigrator(unittest.TestCase):
 
         migrator._setup()
 
-        # Should have called retrieve_docdb_records 3 times (100, 100, 50)
-        self.assertEqual(migrator.client.retrieve_docdb_records.call_count, 3)
+        # Connection check call + 3 batch queries (100, 100, 50)
+        self.assertEqual(migrator.client.retrieve_docdb_records.call_count, 4)
         # First batch: 100 IDs
         migrator.client.retrieve_docdb_records.assert_any_call(
             filter_query={"_id": {"$in": [f"id{i}" for i in range(1, 101)]}}, projection=None, limit=100
@@ -624,8 +629,10 @@ class TestMigrator(unittest.TestCase):
 
         migrator._setup()
 
+        # Connection check call + actual query call
         # In test mode, should only process first ID
-        migrator.client.retrieve_docdb_records.assert_called_once_with(
+        self.assertEqual(migrator.client.retrieve_docdb_records.call_count, 2)
+        migrator.client.retrieve_docdb_records.assert_any_call(
             filter_query={"_id": {"$in": ["id1"]}}, projection=None, limit=1
         )
 
@@ -645,8 +652,10 @@ class TestMigrator(unittest.TestCase):
 
         migrator._setup()
 
+        # Connection check call + actual query call
         # Should use projection with files and always_keep_fields
-        migrator.client.retrieve_docdb_records.assert_called_once_with(
+        self.assertEqual(migrator.client.retrieve_docdb_records.call_count, 2)
+        migrator.client.retrieve_docdb_records.assert_any_call(
             filter_query={"_id": {"$in": ["id1", "id2"]}},
             projection={"file1": 1, "file2": 1, "name": 1, "location": 1},
             limit=2,
@@ -687,8 +696,9 @@ class TestMigrator(unittest.TestCase):
 
         migrator._setup()
 
-        # Should have called retrieve_docdb_records
-        migrator.client.retrieve_docdb_records.assert_called_once_with(
+        # Connection check call + actual query call
+        self.assertEqual(migrator.client.retrieve_docdb_records.call_count, 2)
+        migrator.client.retrieve_docdb_records.assert_any_call(
             filter_query={"_id": {"$in": ["id1", "id2"]}}, projection=None, limit=2
         )
         # original_records should remain empty since no records were returned
