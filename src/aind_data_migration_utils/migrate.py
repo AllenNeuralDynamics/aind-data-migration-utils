@@ -141,6 +141,9 @@ class Migrator:
     def _setup(self):
         """Setup the migration"""
 
+        # Ensure client connection is active
+        self._check_and_establish_client()
+
         if self.files:
             projection = {file: 1 for file in self.files}
             for field in ALWAYS_KEEP_FIELDS:
