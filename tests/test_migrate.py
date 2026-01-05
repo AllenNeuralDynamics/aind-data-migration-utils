@@ -552,6 +552,17 @@ class TestMigrator(unittest.TestCase):
 
     @patch("aind_data_migration_utils.migrate.setup_logger")
     @patch("aind_data_migration_utils.migrate.MetadataDbClient")
+    def test_migrator_initialization_no_migration_callback(self, MockMetadataDbClient, mock_setup_logger):
+        """Test that not providing migration_callback raises ValueError"""
+        query = {"field": "value"}
+
+        with self.assertRaises(ValueError) as context:
+            Migrator(query=query, prod=True, path="test_path")
+
+        self.assertIn("'migration_callback' parameter is required", str(context.exception))
+
+    @patch("aind_data_migration_utils.migrate.setup_logger")
+    @patch("aind_data_migration_utils.migrate.MetadataDbClient")
     def test_setup_with_id_list(self, MockMetadataDbClient, mock_setup_logger):
         """Test the _setup method with id_list"""
         id_list = ["id1", "id2", "id3"]
@@ -661,3 +672,24 @@ class TestMigrator(unittest.TestCase):
         log_calls = [str(call) for call in mock_log_info.call_args_list]
         id_list_log_found = any("Starting migration with 3 record IDs" in str(call) for call in log_calls)
         self.assertTrue(id_list_log_found, "Should log message about id_list")
+
+    @patch("aind_data_migration_utils.migrate.setup_logger")
+    @patch("aind_data_migration_utils.migrate.MetadataDbClient")
+    def test_setup_with_id_list_empty_records(self, MockMetadataDbClient, mock_setup_logger):
+        """Test the _setup method with id_list when retrieve_docdb_records returns empty list"""
+        id_list = ["id1", "id2"]
+        migration_callback = MagicMock()
+        migrator = Migrator(id_list=id_list, migration_callback=migration_callback, prod=True, path="test_path")
+        migrator.test_mode = False
+
+        # Return empty list to test the "if records:" check
+        migrator.client.retrieve_docdb_records = MagicMock(return_value=[])
+
+        migrator._setup()
+
+        # Should have called retrieve_docdb_records
+        migrator.client.retrieve_docdb_records.assert_called_once_with(
+            filter_query={"_id": {"$in": ["id1", "id2"]}}, projection=None, limit=2
+        )
+        # original_records should remain empty since no records were returned
+        self.assertEqual(len(migrator.original_records), 0)
