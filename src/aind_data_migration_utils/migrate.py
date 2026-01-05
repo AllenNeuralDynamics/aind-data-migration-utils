@@ -25,6 +25,7 @@ class Migrator:
         test_mode: bool = False,
         path=".",
         id_list: List[str] = None,
+        id_batch_size: int = 100,
     ):
         """Set up a migration script
 
@@ -42,6 +43,9 @@ class Migrator:
             Path to subfolder where output files will be stored, by default "."
         id_list : List[str], optional
             List of record IDs to migrate. Cannot be used with query.
+        id_batch_size : int, optional
+            Batch size for processing id_list. Only relevant if id_list is provided. Default is 100.
+            Records are retrieved in batches to avoid URL length limits.
         """
 
         # Validate that query and id_list are not both provided
@@ -65,6 +69,7 @@ class Migrator:
 
         self.query = query
         self.id_list = id_list
+        self.id_batch_size = id_batch_size
         self.migration_callback = migration_callback
 
         self.files = files
@@ -144,15 +149,23 @@ class Migrator:
             projection = None
 
         if self.id_list is not None:
-            # Process IDs one at a time to avoid URL length limits
+            # Process IDs in batches to avoid URL length limits
             self.original_records = []
             id_list_to_process = self.id_list[:1] if self.test_mode else self.id_list
-            for record_id in id_list_to_process:
-                query = {"_id": record_id}
+            total_ids = len(id_list_to_process)
+
+            # Process in batches
+            for batch_start in range(0, total_ids, self.id_batch_size):
+                batch_end = min(batch_start + self.id_batch_size, total_ids)
+                batch_ids = id_list_to_process[batch_start:batch_end]
+
+                logging.info(f"Getting records in id_list, fetching {batch_start + 1}:{batch_end} of {total_ids}")
+
+                query = {"_id": {"$in": batch_ids}}
                 records = self.client.retrieve_docdb_records(
                     filter_query=query,
                     projection=projection,
-                    limit=1,
+                    limit=len(batch_ids),
                 )
                 if records:
                     self.original_records.extend(records)
