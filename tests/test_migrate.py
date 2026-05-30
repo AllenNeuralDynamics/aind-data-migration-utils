@@ -34,7 +34,7 @@ class TestMigrator(unittest.TestCase):
         self.assertEqual(migrator.log_dir, migrator.output_dir / "logs")
         mock_setup_logger.assert_called_once_with(migrator.log_dir)
         MockMetadataDbClient.assert_called_once_with(
-            host="api.allenneuraldynamics.org", database="metadata_index", collection="data_assets"
+            host="api.allenneuraldynamics.org", version="v1",
         )
 
     @patch("aind_data_migration_utils.migrate.setup_logger")
@@ -60,7 +60,7 @@ class TestMigrator(unittest.TestCase):
         self.assertEqual(migrator.log_dir, migrator.output_dir / "logs")
         mock_setup_logger.assert_called_once_with(migrator.log_dir)
         MockMetadataDbClient.assert_called_once_with(
-            host="api.allenneuraldynamics-test.org", database="metadata_index", collection="data_assets"
+            host="api.allenneuraldynamics-test.org", version="v1"
         )
 
     @patch("aind_data_migration_utils.migrate.setup_logger")
