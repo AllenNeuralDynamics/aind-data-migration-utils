@@ -26,6 +26,7 @@ class Migrator:
         path=".",
         id_list: List[str] = None,
         id_batch_size: int = 100,
+        version: str = "v1",
     ):
         """Set up a migration script
 
@@ -80,6 +81,7 @@ class Migrator:
         self.results = []
 
         # Initialize the client
+        self.version = version
         self._check_and_establish_client()
 
     def _check_and_establish_client(self):
@@ -95,8 +97,7 @@ class Migrator:
         # Create new client connection
         self.client = MetadataDbClient(
             host=("api.allenneuraldynamics.org" if self.prod else "api.allenneuraldynamics-test.org"),
-            database="metadata_index",
-            collection="data_assets",
+            version=self.version,
         )
 
     def run(self, full_run: bool = False):
