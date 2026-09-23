@@ -17,9 +17,10 @@ pip install aind-data-migration-utils
 
 To use the `Migrator` object, you need to create a DocDB query and a callback. The callback should take a full metadata record as input and return the same metadata record, with any modifications you need to make. Note that you will only have access to core metadata files that you specifically request using `Migrator(files: List[str])`.
 
-There are two main arguments that control the `Migrator` class and how it runs:
+There are three main arguments that control the `Migrator` class and how it runs:
 
 - `Migrator(test_mode: bool)` controls whether or not to run the migrator over all records or just a single record. This is useful when you are running a large migration and want to modify just a single file in production.
+- `Migrator(version: str)` controls which DocDB database the migrator reads and writes: `"v1"` (the default) or `"v2"`. See [Choosing a database version](#choosing-a-database-version-v1-vs-v2) below.
 - `.run(full_run: bool)` whether to actually modify records on the DocDB server
 
 Running a dry run stores a hash that tracks what the dry run was completed on. You cannot run a full run until a hash for that dry run is completed.
@@ -33,6 +34,17 @@ The full process of running a migration is:
 5. Merge the PR.
 
 If your code modifies large numbers of records, split step 4 into three partial steps: (a) re-run the dry run with the `--test` flag to modify only a single record, (b) run the full run with the `--test` flag and check using `metadata-portal.allenneuraldynamics.org/view?name=<your-asset-name>` that the record was modified properly, (c) re-run the full dry and full runs.
+
+## Choosing a database version (v1 vs v2)
+
+The `version` argument selects which DocDB database the migrator targets. `"v1"` and `"v2"` are separate databases: the same asset has different `_id`s in each (if it exists in both at all), and the records follow different schemas (v1 holds legacy aind-data-schema `<2.0` records; v2 holds aind-data-schema `>=2.0` records).
+
+Which one to target depends on where the record lives:
+
+- **Legacy records (exist in v1):** target `version="v1"`. The v1 -> v2 sync in [aind-metadata-upgrader](https://github.com/AllenNeuralDynamics/aind-metadata-upgrader) regenerates a record's v2 copy from v1 whenever the v1 record changes or a new upgrader version is released, so v1 is the source of truth: a fix applied only to the v2 copy will be silently overwritten by the next sync. If the fix needs to appear in v2 immediately (rather than after the next sync), you can additionally apply it to the v2 record, using identical content so the eventual re-sync has no effect.
+- **Records created after the v2 transition (exist only in v2):** target `version="v2"`. The sync only iterates v1 records and will never touch these.
+
+When in doubt, query both databases for your target records before writing the migration to confirm where they exist.
 
 ## Example
 
@@ -72,6 +84,7 @@ if __name__ == "__main__":
         test_mode=args.test,
         files=["subject"],
         prod=True,
+        version="v1",  # target the v1 database ("v2" for post-transition records), see README
     )
     migrator.run(full_run=args.full_run)
 ```

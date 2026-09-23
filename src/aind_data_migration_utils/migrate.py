@@ -40,6 +40,9 @@ class Migrator:
             List of metadata files to include in the migration, by default all files
         prod : bool, optional
             Whether to run in the production docdb, by default True
+        test_mode : bool, optional
+            When True, process only the first matched record. Useful for verifying a migration
+            before running it over all records. Default is False.
         path : str, optional
             Path to subfolder where output files will be stored, by default "."
         id_list : List[str], optional
@@ -47,6 +50,12 @@ class Migrator:
         id_batch_size : int, optional
             Batch size for processing id_list. Only relevant if id_list is provided. Default is 100.
             Records are retrieved in batches to avoid URL length limits.
+        version : str, optional
+            Which DocDB API version (database) to target, "v1" or "v2". Default is "v1".
+            These are separate databases with separate records and different _ids: v1 holds
+            legacy (aind-data-schema <2.0) records, which are synced into v2 by
+            aind-metadata-upgrader, while records created after the v2 transition exist only
+            in v2. See the README for guidance on choosing.
         """
 
         # Validate that query and id_list are not both provided
