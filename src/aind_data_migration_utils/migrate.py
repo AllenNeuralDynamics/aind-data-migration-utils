@@ -1,5 +1,6 @@
 """Migration script wrapper"""
 
+import json
 import logging
 from pathlib import Path
 from typing import Callable, List
@@ -198,7 +199,9 @@ class Migrator:
 
         for record in self.original_records:
             try:
-                self.migrated_records.append(self.migration_callback(record))
+                migrated = self.migration_callback(record)
+                json.dumps(migrated)
+                self.migrated_records.append(migrated)
             except Exception as e:
                 logging.error(f"Error migrating record {record['name']}: {e}")
                 self.results.append(

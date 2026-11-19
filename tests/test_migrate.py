@@ -188,6 +188,30 @@ class TestMigrator(unittest.TestCase):
 
     @patch("aind_data_migration_utils.migrate.setup_logger")
     @patch("aind_data_migration_utils.migrate.MetadataDbClient")
+    def test_migrate_with_non_json_value(self, MockMetadataDbClient, mock_setup_logger):
+        """Test that the _migrate method fails a record the callback left a non-JSON value in"""
+
+        class Structure:
+            """Stand-in for a model object a validator writes into the record"""
+
+        def migration_callback(record):
+            """Leave an object in the record"""
+            record["session"]["targeted_structure"] = Structure()
+            return record
+
+        migrator = Migrator({"field": "value"}, migration_callback, prod=True, path="test_path")
+        migrator.original_records = [{"name": "old_name", "session": {"targeted_structure": "VISp"}}]
+
+        migrator._migrate()
+
+        self.assertEqual(migrator.migrated_records, [])
+        self.assertEqual(len(migrator.results), 1)
+        self.assertEqual(migrator.results[0]["name"], "old_name")
+        self.assertEqual(migrator.results[0]["status"], "failed")
+        self.assertIn("not JSON serializable", migrator.results[0]["notes"])
+
+    @patch("aind_data_migration_utils.migrate.setup_logger")
+    @patch("aind_data_migration_utils.migrate.MetadataDbClient")
     def test_upsert_full_run(self, MockMetadataDbClient, mock_setup_logger):
         """Test the _upsert method with a full run"""
         query = {"field": "value"}
