@@ -67,7 +67,8 @@ def your_callback(record: dict) -> dict:
         record["subject"]["subject_id"] = str(record["subject"]["subject_id"])
         logging.info(f"Modified type of subject_id field for record {record["name"]} from {original_type} to str)")
     
-    # Note: raising Exceptions inside a callback will log errors in the results.csv file
+    # Note: raising Exceptions inside a callback, or returning a record that is not JSON serializable,
+    # will log errors in the results.csv file
 
     return record
 
